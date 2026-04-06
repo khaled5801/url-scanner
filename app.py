@@ -1,472 +1,527 @@
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
-import requests
-import base64
-from urllib.parse import urlparse
+"""
+CyberScan Sentinel – Advanced URL Intelligence & Automated Sandbox
+A professional security analysis platform for URL threat detection.
+"""
+
 import os
-from dotenv import load_dotenv
+import json
+import requests
 import re
-import ssl
-import socket
+from urllib.parse import urlparse, urljoin
+from functools import lru_cache
 from datetime import datetime
+
+from flask import Flask, render_template, request, jsonify
+from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+app.config['JSON_SORT_KEYS'] = False
+
+# ============================================================================
+# CONFIGURATION & CONSTANTS
+# ============================================================================
 
 VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
-VT_API_URL = "https://www.virustotal.com/api/v3"
+SCREENSHOT_API_KEY = os.getenv('SCREENSHOT_API_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+VIRUSTOTAL_URL_ENDPOINT = "https://www.virustotal.com/api/v3/urls"
+MAX_REDIRECTS = 10
+REQUEST_TIMEOUT = 10
+SCREENSHOT_TIMEOUT = 15
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    url = request.json.get('url')
+# Suspicious pattern signatures for static analysis
+SUSPICIOUS_PATTERNS = {
+    'obfuscated_js': [
+        r'eval\s*\(',
+        r'Function\s*\(',
+        r'atob\s*\(',
+        r'\[[\s\S]{0,20}\]\.\w+\(',
+    ],
+    'hidden_iframes': [
+        r'<iframe[^>]*\s+hidden',
+        r'<iframe[^>]*style="display:none"',
+        r'<iframe[^>]*width=["\']*0',
+    ],
+    'auto_download': [
+        r'<a[^>]*download\s*=',
+        r'window\.location\s*=\s*["\']data:',
+    ],
+    'suspicious_scripts': [
+        r'<script[^>]*src=["\']([^"\']*)?eval',
+        r'document\.write\s*\(',
+    ],
+}
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+def is_valid_url(url: str) -> tuple[bool, str]:
+    """
+    Validate URL format and protocol.
+    Returns: (is_valid, normalized_url)
+    """
+    if not url or not isinstance(url, str):
+        return False, ""
     
-    if not url:
-        return jsonify({'error': 'URL is required'}), 400
+    url = url.strip()
     
+    # Add protocol if missing
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     
-    # جمع جميع البيانات
-    virustotal_data = check_virustotal(url)
-    redirects_data = detect_redirects(url)
-    ssl_data = check_ssl(url)
-    patterns_data = detect_malicious_patterns(url)
-    injection_data = detect_injection_threats(url)
-    screenshot_data = get_screenshot_safe(url)
-    
-    # AI Analysis - تحليل ذكي للبيانات
-    ai_analysis = perform_ai_analysis(
-        url=url,
-        virustotal=virustotal_data,
-        redirects=redirects_data,
-        ssl=ssl_data,
-        patterns=patterns_data,
-        injection=injection_data
-    )
-    
-    results = {
-        'url': url,
-        'virustotal': virustotal_data,
-        'redirects': redirects_data,
-        'ssl_check': ssl_data,
-        'malicious_patterns': patterns_data,
-        'injection_check': injection_data,
-        'screenshot': screenshot_data,
-        'ai_analysis': ai_analysis,
-        'overall_risk': ai_analysis['risk_level'],
-        'risk_score': ai_analysis['risk_score'],
-        'timestamp': datetime.now().isoformat()
-    }
-    
-    return jsonify(results)
-
-def perform_ai_analysis(url, virustotal, redirects, ssl, patterns, injection):
-    """تحليل ذكي للرابط"""
-    
-    risk_factors = []
-    risk_score = 0
-    
-    # 1. VirusTotal Analysis
-    if virustotal['malicious'] > 0:
-        risk_score += virustotal['malicious'] * 20
-        risk_factors.append({
-            'type': 'malware_detected',
-            'severity': 'critical',
-            'message': f"Malware detected by {virustotal['malicious']} vendors",
-            'confidence': 95
-        })
-    
-    if virustotal['suspicious'] > 0:
-        risk_score += virustotal['suspicious'] * 10
-        risk_factors.append({
-            'type': 'suspicious_activity',
-            'severity': 'high',
-            'message': f"Suspicious behavior detected by {virustotal['suspicious']} vendors",
-            'confidence': 75
-        })
-    
-    # 2. SSL Certificate Analysis
-    if not ssl['valid']:
-        risk_score += 15
-        risk_factors.append({
-            'type': 'invalid_ssl',
-            'severity': 'high',
-            'message': 'Invalid or missing SSL certificate',
-            'confidence': 90
-        })
-    
-    # 3. Redirect Analysis
-    if redirects['suspicious']:
-        risk_score += 20
-        risk_factors.append({
-            'type': 'suspicious_redirects',
-            'severity': 'high',
-            'message': f"Domain changes detected across {len(redirects['redirects'])} redirects",
-            'confidence': 85
-        })
-    
-    # 4. URL Pattern Analysis
-    if patterns['found']:
-        risk_score += patterns['count'] * 8
-        risk_factors.append({
-            'type': 'malicious_patterns',
-            'severity': 'medium',
-            'message': f"{patterns['count']} suspicious patterns detected in URL",
-            'confidence': 70
-        })
-    
-    # 5. Injection Threat Analysis
-    if injection['found']:
-        risk_score += injection['count'] * 5
-        risk_factors.append({
-            'type': 'code_injection',
-            'severity': 'high',
-            'message': f"Potential code injection vectors detected",
-            'confidence': 80
-        })
-    
-    # 6. Domain Age & Reputation (AI Logic)
-    domain = urlparse(url).netloc
-    domain_risk = analyze_domain_reputation(domain)
-    if domain_risk['risk_level'] > 0:
-        risk_score += domain_risk['risk_level']
-        risk_factors.append(domain_risk['factor'])
-    
-    # 7. URL Structure Analysis (AI Logic)
-    structure_risk = analyze_url_structure(url)
-    if structure_risk['risk_level'] > 0:
-        risk_score += structure_risk['risk_level']
-        risk_factors.append(structure_risk['factor'])
-    
-    # Cap risk score at 100
-    risk_score = min(int(risk_score), 100)
-    
-    # Determine risk level
-    if risk_score >= 70:
-        risk_level = 'DANGEROUS'
-        recommendation = 'Do not access this URL. High probability of malware or phishing.'
-    elif risk_score >= 40:
-        risk_level = 'SUSPICIOUS'
-        recommendation = 'Proceed with caution. Consider avoiding data entry on this site.'
-    else:
-        risk_level = 'SAFE'
-        recommendation = 'URL appears to be safe. Normal precautions recommended.'
-    
-    # Generate AI confidence score
-    confidence = calculate_ai_confidence(risk_factors)
-    
-    return {
-        'risk_level': risk_level,
-        'risk_score': risk_score,
-        'confidence': confidence,
-        'recommendation': recommendation,
-        'risk_factors': risk_factors,
-        'analysis_timestamp': datetime.now().isoformat()
-    }
-
-def analyze_domain_reputation(domain):
-    """تحليل سمعة النطاق"""
-    risk_level = 0
-    factor = None
-    
-    # Check for newly registered domains (suspicious)
-    if len(domain.split('.')) == 2:  # Simple domain
-        # Check for suspicious TLDs
-        tld = domain.split('.')[-1]
-        suspicious_tlds = ['tk', 'ml', 'ga', 'cf', 'top', 'work', 'stream']
-        
-        if tld in suspicious_tlds:
-            risk_level = 12
-            factor = {
-                'type': 'suspicious_tld',
-                'severity': 'medium',
-                'message': f'Suspicious TLD (.{tld}) commonly used for malicious sites',
-                'confidence': 65
-            }
-    
-    # Check for homograph attacks (visually similar domains)
-    suspicious_domains = [
-        'qoogle.com', 'goog1e.com', 'g00gle.com',
-        'facebook.com', 'facebookk.com',
-        'amazon.com', 'amaz0n.com'
-    ]
-    
-    if domain in suspicious_domains or contains_lookalike(domain):
-        risk_level = 25
-        factor = {
-            'type': 'homograph_attack',
-            'severity': 'critical',
-            'message': 'Domain appears to mimic a well-known legitimate site',
-            'confidence': 88
-        }
-    
-    return {
-        'risk_level': risk_level,
-        'factor': factor
-    }
-
-def analyze_url_structure(url):
-    """تحليل هيكل الرابط"""
-    risk_level = 0
-    factor = None
-    
-    # Check for overly long URLs (common in phishing)
-    if len(url) > 100:
-        risk_level = 5
-        factor = {
-            'type': 'long_url',
-            'severity': 'low',
-            'message': 'Unusually long URL, commonly used in phishing attacks',
-            'confidence': 60
-        }
-    
-    # Check for suspicious parameters
-    if '?' in url:
-        params = url.split('?')[1]
-        if 'redirect' in params.lower() or 'forward' in params.lower():
-            risk_level = 15
-            factor = {
-                'type': 'redirect_parameter',
-                'severity': 'medium',
-                'message': 'URL contains redirect parameters',
-                'confidence': 72
-            }
-    
-    # Check for nested subdomains
-    domain_parts = url.split('/')[2].split('.')
-    if len(domain_parts) > 3:
-        risk_level = 8
-        factor = {
-            'type': 'suspicious_subdomains',
-            'severity': 'low',
-            'message': 'Multiple nested subdomains detected',
-            'confidence': 58
-        }
-    
-    return {
-        'risk_level': risk_level,
-        'factor': factor
-    }
-
-def contains_lookalike(domain):
-    """Check for homograph attacks"""
-    lookalikes = {
-        'google': ['g00gle', 'qoogle', 'g0ogle'],
-        'facebook': ['facebookk', 'faceb00k'],
-        'amazon': ['amaz0n', 'amtzon'],
-        'paypal': ['paypa1', 'paypla'],
-    }
-    
-    for brand, variants in lookalikes.items():
-        if any(variant in domain.lower() for variant in variants):
-            return True
-    return False
-
-def calculate_ai_confidence(risk_factors):
-    """حساب مستوى ثقة التحليل"""
-    if not risk_factors:
-        return 100
-    
-    # Average confidence of all factors
-    total_confidence = sum(factor.get('confidence', 0) for factor in risk_factors)
-    return min(int(total_confidence / len(risk_factors)), 100)
-
-def check_virustotal(url):
     try:
-        if not VIRUSTOTAL_API_KEY:
+        result = urlparse(url)
+        if result.scheme not in ('http', 'https'):
+            return False, ""
+        if not result.netloc:
+            return False, ""
+        return True, url
+    except Exception:
+        return False, ""
+
+
+def track_redirection_chain(url: str) -> dict:
+    """
+    Follow HTTP redirects and log the chain.
+    Returns: {
+        'chain': [...],
+        'final_url': str,
+        'status_code': int,
+        'error': str or None
+    }
+    """
+    chain = []
+    current_url = url
+    
+    try:
+        for hop in range(MAX_REDIRECTS):
+            try:
+                response = requests.head(
+                    current_url,
+                    allow_redirects=False,
+                    timeout=REQUEST_TIMEOUT,
+                    headers={
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                )
+                
+                chain.append({
+                    'hop': hop + 1,
+                    'url': current_url,
+                    'status_code': response.status_code,
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+                
+                # Check for redirects
+                if response.status_code in (301, 302, 303, 307, 308):
+                    location = response.headers.get('Location')
+                    if location:
+                        current_url = urljoin(current_url, location)
+                    else:
+                        break
+                else:
+                    break
+                    
+            except requests.exceptions.Timeout:
+                return {
+                    'chain': chain,
+                    'final_url': current_url,
+                    'status_code': None,
+                    'error': f'Timeout at hop {hop + 1}'
+                }
+            except requests.exceptions.ConnectionError:
+                return {
+                    'chain': chain,
+                    'final_url': current_url,
+                    'status_code': None,
+                    'error': f'Connection error at hop {hop + 1}'
+                }
+        
+        return {
+            'chain': chain,
+            'final_url': current_url,
+            'status_code': chain[-1]['status_code'] if chain else None,
+            'error': None
+        }
+        
+    except Exception as e:
+        return {
+            'chain': chain,
+            'final_url': current_url,
+            'status_code': None,
+            'error': str(e)
+        }
+
+
+def analyze_html_for_threats(url: str) -> dict:
+    """
+    Perform static analysis on target HTML for malicious patterns.
+    """
+    findings = {
+        'obfuscated_code': [],
+        'hidden_iframes': [],
+        'auto_download': [],
+        'suspicious_scripts': [],
+        'risk_score': 0,
+        'error': None
+    }
+    
+    try:
+        response = requests.get(
+            url,
+            timeout=REQUEST_TIMEOUT,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        )
+        response.raise_for_status()
+        html_source = response.text.lower()
+        
+        # Scan for obfuscated JavaScript
+        for pattern in SUSPICIOUS_PATTERNS['obfuscated_js']:
+            matches = re.findall(pattern, html_source, re.IGNORECASE)
+            if matches:
+                findings['obfuscated_code'].extend(matches[:3])
+                findings['risk_score'] += 15
+        
+        # Scan for hidden iframes
+        for pattern in SUSPICIOUS_PATTERNS['hidden_iframes']:
+            if re.search(pattern, html_source, re.IGNORECASE):
+                findings['hidden_iframes'].append(pattern)
+                findings['risk_score'] += 20
+        
+        # Scan for auto-download behaviors
+        for pattern in SUSPICIOUS_PATTERNS['auto_download']:
+            matches = re.findall(pattern, html_source, re.IGNORECASE)
+            if matches:
+                findings['auto_download'].extend(matches[:2])
+                findings['risk_score'] += 25
+        
+        # Scan for suspicious scripts
+        for pattern in SUSPICIOUS_PATTERNS['suspicious_scripts']:
+            matches = re.findall(pattern, html_source, re.IGNORECASE)
+            if matches:
+                findings['suspicious_scripts'].extend(matches[:3])
+                findings['risk_score'] += 10
+        
+        findings['risk_score'] = min(findings['risk_score'], 100)
+        
+    except requests.exceptions.Timeout:
+        findings['error'] = 'HTML analysis timeout exceeded'
+    except requests.exceptions.ConnectionError:
+        findings['error'] = 'Unable to reach target URL for static analysis'
+    except Exception as e:
+        findings['error'] = f'Static analysis error: {str(e)}'
+    
+    return findings
+
+
+def query_virustotal(url: str) -> dict:
+    """
+    Query VirusTotal API V3 for URL threat intelligence.
+    """
+    if not VIRUSTOTAL_API_KEY:
+        return {
+            'error': 'VirusTotal API key not configured',
+            'vendors_checked': 0,
+            'malicious': 0,
+            'suspicious': 0,
+            'harmless': 0,
+            'undetected': 0
+        }
+    
+    try:
+        # Encode URL for VirusTotal
+        from urllib.parse import quote
+        encoded_url = quote(url, safe='')
+        
+        headers = {
+            'x-apikey': VIRUSTOTAL_API_KEY,
+            'User-Agent': 'CyberScan-Sentinel/1.0'
+        }
+        
+        # First, submit the URL for scanning
+        response = requests.post(
+            VIRUSTOTAL_URL_ENDPOINT,
+            headers=headers,
+            data={'url': url},
+            timeout=REQUEST_TIMEOUT
+        )
+        
+        if response.status_code not in (200, 201):
             return {
+                'error': f'VirusTotal API error: {response.status_code}',
+                'vendors_checked': 0,
                 'malicious': 0,
                 'suspicious': 0,
-                'undetected': 0,
                 'harmless': 0,
-                'total_vendors': 0
+                'undetected': 0
             }
         
-        headers = {"x-apikey": VIRUSTOTAL_API_KEY}
-        url_id = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
+        data = response.json()
+        url_id = data['data']['id']
+        
+        # Retrieve analysis results
+        analysis_url = f"{VIRUSTOTAL_URL_ENDPOINT}/{url_id}"
+        analysis_response = requests.get(
+            analysis_url,
+            headers=headers,
+            timeout=REQUEST_TIMEOUT
+        )
+        
+        if analysis_response.status_code != 200:
+            return {
+                'error': 'Unable to retrieve VirusTotal analysis',
+                'vendors_checked': 0,
+                'malicious': 0,
+                'suspicious': 0,
+                'harmless': 0,
+                'undetected': 0
+            }
+        
+        stats = analysis_response.json()['data']['attributes']['last_analysis_stats']
+        
+        return {
+            'error': None,
+            'vendors_checked': sum(stats.values()),
+            'malicious': stats.get('malicious', 0),
+            'suspicious': stats.get('suspicious', 0),
+            'harmless': stats.get('harmless', 0),
+            'undetected': stats.get('undetected', 0)
+        }
+        
+    except requests.exceptions.Timeout:
+        return {
+            'error': 'VirusTotal API timeout',
+            'vendors_checked': 0,
+            'malicious': 0,
+            'suspicious': 0,
+            'harmless': 0,
+            'undetected': 0
+        }
+    except Exception as e:
+        return {
+            'error': f'VirusTotal query error: {str(e)}',
+            'vendors_checked': 0,
+            'malicious': 0,
+            'suspicious': 0,
+            'harmless': 0,
+            'undetected': 0
+        }
+
+
+def generate_screenshot(url: str) -> dict:
+    """
+    Generate a sandbox screenshot using ScreenshotAPI.net
+    """
+    if not SCREENSHOT_API_KEY:
+        return {
+            'success': False,
+            'error': 'Screenshot API key not configured',
+            'screenshot_url': None
+        }
+    
+    try:
+        # ScreenshotAPI.net endpoint
+        api_url = "https://api.screenshotapi.net/capture"
+        
+        params = {
+            'apikey': SCREENSHOT_API_KEY,
+            'url': url,
+            'format': 'png',
+            'width': 1366,
+            'height': 768
+        }
         
         response = requests.get(
-            f"{VT_API_URL}/urls/{url_id}",
-            headers=headers,
-            timeout=10
+            api_url,
+            params=params,
+            timeout=SCREENSHOT_TIMEOUT
         )
         
         if response.status_code == 200:
-            data = response.json()
-            stats = data['data']['attributes']['last_analysis_stats']
-            
-            return {
-                'malicious': stats.get('malicious', 0),
-                'suspicious': stats.get('suspicious', 0),
-                'undetected': stats.get('undetected', 0),
-                'harmless': stats.get('harmless', 0),
-                'total_vendors': sum(stats.values())
-            }
+            screenshot_data = response.json()
+            if screenshot_data.get('success'):
+                return {
+                    'success': True,
+                    'error': None,
+                    'screenshot_url': screenshot_data.get('screenshot')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': screenshot_data.get('error', 'Unknown error'),
+                    'screenshot_url': None
+                }
         else:
             return {
-                'malicious': 0,
-                'suspicious': 0,
-                'undetected': 0,
-                'harmless': 0,
-                'total_vendors': 0
+                'success': False,
+                'error': f'API returned status {response.status_code}',
+                'screenshot_url': None
             }
-    except Exception as e:
-        print(f"VirusTotal Error: {e}")
-        return {
-            'malicious': 0,
-            'suspicious': 0,
-            'undetected': 0,
-            'harmless': 0,
-            'total_vendors': 0
-        }
-
-def detect_redirects(url):
-    try:
-        response = requests.head(url, allow_redirects=False, timeout=5, verify=True)
-        
-        redirects = []
-        current_url = url
-        redirect_count = 0
-        
-        while 300 <= response.status_code < 400 and redirect_count < 5:
-            redirect_url = response.headers.get('Location', '')
-            if not redirect_url:
-                break
             
-            redirects.append({
-                'from': current_url,
-                'to': redirect_url
-            })
-            
-            current_url = redirect_url
-            response = requests.head(redirect_url, allow_redirects=False, timeout=5, verify=True)
-            redirect_count += 1
-        
-        suspicious = False
-        if redirects:
-            original_domain = urlparse(url).netloc
-            final_domain = urlparse(current_url).netloc
-            suspicious = original_domain != final_domain
-        
+    except requests.exceptions.Timeout:
         return {
-            'found': len(redirects) > 0,
-            'count': len(redirects),
-            'redirects': redirects,
-            'suspicious': suspicious
+            'success': False,
+            'error': 'Screenshot generation timeout',
+            'screenshot_url': None
         }
     except Exception as e:
         return {
-            'found': False,
-            'count': 0,
-            'redirects': [],
-            'suspicious': False
+            'success': False,
+            'error': f'Screenshot error: {str(e)}',
+            'screenshot_url': None
         }
 
-def check_ssl(url):
+
+def calculate_threat_level(vt_data: dict, static_analysis: dict) -> str:
+    """
+    Determine threat level based on analysis results.
+    Returns: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'CLEAN'
+    """
+    malicious_count = vt_data.get('malicious', 0)
+    suspicious_count = vt_data.get('suspicious', 0)
+    static_risk = static_analysis.get('risk_score', 0)
+    
+    threat_score = (malicious_count * 10) + (suspicious_count * 5) + static_risk
+    
+    if threat_score >= 80:
+        return 'CRITICAL'
+    elif threat_score >= 60:
+        return 'HIGH'
+    elif threat_score >= 40:
+        return 'MEDIUM'
+    elif threat_score >= 20:
+        return 'LOW'
+    else:
+        return 'CLEAN'
+
+
+# ============================================================================
+# ROUTES
+# ============================================================================
+
+@app.route('/')
+def index():
+    """Serve the main dashboard."""
+    return render_template('index.html')
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    """
+    Main analysis endpoint.
+    Request: { "url": "https://example.com" }
+    Response: { intelligence report }
+    """
     try:
-        domain = urlparse(url).netloc
-        context = ssl.create_default_context()
+        data = request.get_json()
+        target_url = data.get('url', '').strip()
         
-        try:
-            with socket.create_connection((domain, 443), timeout=5) as sock:
-                with context.wrap_socket(sock, server_hostname=domain) as ssock:
-                    cert = ssock.getpeercert()
-                    
-                    return {
-                        'valid': True,
-                        'issuer': cert.get('issuer', [{}])[0].get('commonName', 'Unknown'),
-                        'subject': cert.get('subject', [{}])[0].get('commonName', domain),
-                        'message': 'Valid SSL Certificate'
-                    }
-        except ssl.SSLError:
-            return {
-                'valid': False,
-                'message': 'Invalid SSL Certificate'
-            }
-    except Exception as e:
-        return {
-            'valid': False,
-            'message': 'SSL Check Failed'
+        # Validate input
+        is_valid, normalized_url = is_valid_url(target_url)
+        if not is_valid:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid URL format or unsupported protocol. Please provide a valid HTTP/HTTPS URL.',
+                'error_type': 'INVALID_URL'
+            }), 400
+        
+        # Initialize response
+        intelligence_report = {
+            'url_analyzed': normalized_url,
+            'timestamp': datetime.utcnow().isoformat(),
+            'redirection_chain': None,
+            'virustotal_analysis': None,
+            'static_analysis': None,
+            'screenshot': None,
+            'threat_level': None,
+            'summary': None
         }
-
-def detect_malicious_patterns(url):
-    suspicious_patterns = []
-    
-    dangerous_keywords = [
-        'bit.ly', 'tinyurl', 'short.link', 'goo.gl',
-        'free-download', 'free-software', 'confirm-account',
-        'verify-account', 'update-now', 'click-here',
-        'limited-time', 'act-now', 'claim-prize'
-    ]
-    
-    url_lower = url.lower()
-    for keyword in dangerous_keywords:
-        if keyword in url_lower:
-            suspicious_patterns.append(f'Suspicious keyword: {keyword}')
-    
-    if '%' in url and len(url.split('%')) > 4:
-        suspicious_patterns.append('Unusual URL encoding')
-    
-    domain = urlparse(url).netloc
-    if re.match(r'^\d+\.\d+\.\d+\.\d+', domain):
-        suspicious_patterns.append('IP address instead of domain')
-    
-    return {
-        'found': len(suspicious_patterns) > 0,
-        'patterns': suspicious_patterns,
-        'count': len(suspicious_patterns)
-    }
-
-def detect_injection_threats(url):
-    threats = []
-    
-    try:
-        response = requests.get(url, timeout=10, allow_redirects=True)
-        html_content = response.text.lower()
         
-        if '<script' in html_content:
-            threats.append('JavaScript code detected')
+        # Step 1: Track redirections
+        intelligence_report['redirection_chain'] = track_redirection_chain(normalized_url)
         
-        if 'eval(' in html_content:
-            threats.append('Eval function detected')
+        final_url = intelligence_report['redirection_chain']['final_url']
         
-        if '<iframe' in html_content:
-            if 'display:none' in html_content or 'visibility:hidden' in html_content:
-                threats.append('Hidden iframe detected')
+        # Step 2: VirusTotal analysis
+        intelligence_report['virustotal_analysis'] = query_virustotal(final_url)
         
-        return {
-            'found': len(threats) > 0,
-            'threats': threats,
-            'count': len(threats)
-        }
-    except:
-        return {
-            'found': False,
-            'threats': [],
-            'count': 0
-        }
-
-def get_screenshot_safe(url):
-    try:
-        response = requests.get(
-            f"https://urlscreenshot.com/generate?url={url}&format=png",
-            timeout=15,
-            headers={'User-Agent': 'Mozilla/5.0'}
+        # Step 3: Static HTML analysis
+        intelligence_report['static_analysis'] = analyze_html_for_threats(final_url)
+        
+        # Step 4: Generate screenshot
+        intelligence_report['screenshot'] = generate_screenshot(final_url)
+        
+        # Step 5: Calculate threat level
+        intelligence_report['threat_level'] = calculate_threat_level(
+            intelligence_report['virustotal_analysis'],
+            intelligence_report['static_analysis']
         )
         
-        if response.status_code == 200 and len(response.content) > 100:
-            return base64.b64encode(response.content).decode()
-    except:
-        pass
-    
-    return None
+        # Step 6: Generate summary
+        intelligence_report['summary'] = {
+            'total_hops': len(intelligence_report['redirection_chain']['chain']),
+            'vendors_checked': intelligence_report['virustotal_analysis'].get('vendors_checked', 0),
+            'malicious_detections': intelligence_report['virustotal_analysis'].get('malicious', 0),
+            'static_risk_score': intelligence_report['static_analysis'].get('risk_score', 0)
+        }
+        
+        return jsonify({
+            'success': True,
+            'intelligence_report': intelligence_report
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Unexpected error during analysis: {str(e)}',
+            'error_type': 'ANALYSIS_ERROR'
+        }), 500
+
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint for deployment verification."""
+    return jsonify({
+        'status': 'operational',
+        'service': 'CyberScan Sentinel',
+        'timestamp': datetime.utcnow().isoformat()
+    }), 200
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors."""
+    return jsonify({
+        'success': False,
+        'error': 'Endpoint not found',
+        'error_type': 'NOT_FOUND'
+    }), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    """Handle 500 errors."""
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error',
+        'error_type': 'SERVER_ERROR'
+    }), 500
+
+
+# ============================================================================
+# APPLICATION ENTRY POINT
+# ============================================================================
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-  
+    debug_mode = os.getenv('FLASK_ENV', 'production') == 'development'
+    app.run(
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        debug=debug_mode
+    )

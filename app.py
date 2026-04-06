@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 import re
 import ssl
 import socket
-from datetime import datetime
 
 load_dotenv()
 
@@ -24,13 +23,11 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    """تحليل الرابط بشكل ذكي"""
     url = request.json.get('url')
     
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     
-    # إضافة https
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     
@@ -42,11 +39,9 @@ def analyze():
         'malicious_patterns': detect_malicious_patterns(url),
         'injection_check': detect_injection_threats(url),
         'screenshot': get_screenshot_safe(url),
-        'overall_risk': 'SAFE',
-        'timestamp': datetime.now().isoformat()
+        'overall_risk': 'SAFE'
     }
     
-    # حساب درجة الخطر
     risk_score = calculate_risk(results)
     results['risk_score'] = risk_score
     
@@ -60,7 +55,6 @@ def analyze():
     return jsonify(results)
 
 def check_virustotal(url):
-    """فحص الرابط في VirusTotal"""
     try:
         if not VIRUSTOTAL_API_KEY:
             return {
@@ -68,8 +62,7 @@ def check_virustotal(url):
                 'suspicious': 0,
                 'undetected': 0,
                 'harmless': 0,
-                'total_vendors': 0,
-                'source': 'offline'
+                'total_vendors': 0
             }
         
         headers = {"x-apikey": VIRUSTOTAL_API_KEY}
@@ -90,8 +83,7 @@ def check_virustotal(url):
                 'suspicious': stats.get('suspicious', 0),
                 'undetected': stats.get('undetected', 0),
                 'harmless': stats.get('harmless', 0),
-                'total_vendors': sum(stats.values()),
-                'source': 'virustotal'
+                'total_vendors': sum(stats.values())
             }
         else:
             return {
@@ -99,8 +91,7 @@ def check_virustotal(url):
                 'suspicious': 0,
                 'undetected': 0,
                 'harmless': 0,
-                'total_vendors': 0,
-                'source': 'offline'
+                'total_vendors': 0
             }
     except Exception as e:
         print(f"VirusTotal Error: {e}")
@@ -109,12 +100,10 @@ def check_virustotal(url):
             'suspicious': 0,
             'undetected': 0,
             'harmless': 0,
-            'total_vendors': 0,
-            'source': 'error'
+            'total_vendors': 0
         }
 
 def detect_redirects(url):
-    """فحص إعادات التوجيه المريبة"""
     try:
         response = requests.head(url, allow_redirects=False, timeout=5, verify=True)
         
@@ -146,8 +135,7 @@ def detect_redirects(url):
             'found': len(redirects) > 0,
             'count': len(redirects),
             'redirects': redirects,
-            'suspicious': suspicious,
-            'message': '⚠️ تحويلات مريبة!' if suspicious else '✅ تحويلات آمنة' if redirects else '✅ بدون تحويلات'
+            'suspicious': suspicious
         }
     except Exception as e:
         print(f"Redirect detection error: {e}")
@@ -155,12 +143,10 @@ def detect_redirects(url):
             'found': False,
             'count': 0,
             'redirects': [],
-            'suspicious': False,
-            'message': 'لم يتمكن من الفحص'
+            'suspicious': False
         }
 
 def check_ssl(url):
-    """فحص شهادة SSL"""
     try:
         domain = urlparse(url).netloc
         context = ssl.create_default_context()
@@ -174,57 +160,46 @@ def check_ssl(url):
                         'valid': True,
                         'issuer': cert.get('issuer', [{}])[0].get('commonName', 'Unknown'),
                         'subject': cert.get('subject', [{}])[0].get('commonName', domain),
-                        'message': '✅ شهادة SSL صحيحة'
+                        'message': 'Valid SSL Certificate'
                     }
         except ssl.SSLError as e:
             return {
                 'valid': False,
                 'error': str(e),
-                'message': '⚠️ شهادة SSL غير صحيحة!'
+                'message': 'Invalid SSL Certificate'
             }
     except Exception as e:
-        print(f"SSL check error: {e}")
         return {
             'valid': False,
             'error': str(e),
-            'message': '⚠️ خطأ في فحص SSL'
+            'message': 'SSL Check Failed'
         }
 
 def detect_malicious_patterns(url):
-    """فحص الأنماط المريبة في الرابط"""
     suspicious_patterns = []
     
     dangerous_keywords = [
         'bit.ly', 'tinyurl', 'short.link', 'goo.gl',
-        'free-', 'download-', 'click-here', 'free-download',
-        'confirm-', 'verify-', 'update-', 'urgent',
-        'limited-time', 'act-now', 'pay-now', 'claim-prize',
-        'win-', 'earn-', 'get-rich', 'crypto', 'bitcoin'
+        'free-download', 'free-software', 'confirm-account',
+        'verify-account', 'update-now', 'click-here',
+        'limited-time', 'act-now', 'claim-prize'
     ]
     
     url_lower = url.lower()
     for keyword in dangerous_keywords:
         if keyword in url_lower:
-            suspicious_patterns.append(f'🚩 كلمة مريبة: {keyword}')
+            suspicious_patterns.append(f'Suspicious keyword detected: {keyword}')
     
-    # فحص الترميز الغريب
     if '%' in url and len(url.split('%')) > 4:
-        suspicious_patterns.append('🚩 ترميز غير عادي في الرابط')
+        suspicious_patterns.append('Unusual URL encoding detected')
     
-    # فحص عدد النقاط
     domains = url.split('/')[-1].split('.')
     if len(domains) > 3:
-        suspicious_patterns.append('🚩 نطاق معقد غير عادي')
+        suspicious_patterns.append('Complex domain structure detected')
     
-    # فحص استخدام IP بدلاً من النطاق
     domain = urlparse(url).netloc
     if re.match(r'^\d+\.\d+\.\d+\.\d+', domain):
-        suspicious_patterns.append('🚩 استخدام عنوان IP بدلاً من النطاق')
-    
-    # فحص الأحرف المشابهة
-    if 'google.com' in url_lower or 'facebook.com' in url_lower or 'amazon.com' in url_lower:
-        if domain not in ['google.com', 'www.google.com', 'facebook.com', 'www.facebook.com', 'amazon.com', 'www.amazon.com']:
-            suspicious_patterns.append('🚩 تقليد موقع شهير')
+        suspicious_patterns.append('IP address used instead of domain')
     
     return {
         'found': len(suspicious_patterns) > 0,
@@ -233,39 +208,24 @@ def detect_malicious_patterns(url):
     }
 
 def detect_injection_threats(url):
-    """فحص تهديدات الحقن والملفات الخطيرة"""
     threats = []
     
     try:
         response = requests.get(url, timeout=10, allow_redirects=True)
         html_content = response.text.lower()
         
-        # فحص الـ JavaScript المريب
         if '<script' in html_content:
-            threats.append('⚠️ تطبيقات JavaScript قد تكون خطيرة')
+            threats.append('JavaScript code detected')
         
-        # فحص eval
         if 'eval(' in html_content:
-            threats.append('🚩 كود Eval خطير جداً')
+            threats.append('Dangerous eval() function detected')
         
-        # فحص document.write
         if 'document.write' in html_content:
-            threats.append('⚠️ تعديل صفحة DOM قد يكون خطيراً')
+            threats.append('DOM manipulation detected')
         
-        # فحص الـ iFrames المخفية
         if '<iframe' in html_content:
-            if 'display:none' in html_content or 'visibility:hidden' in html_content or 'width:0' in html_content:
-                threats.append('🚩 iFrame مخفي قد يحمل برامج ضارة')
-            else:
-                threats.append('⚠️ وجود iFrame قد يحمل محتوى غير آمن')
-        
-        # فحص البرامج المسيئة
-        if 'malware' in html_content or 'phishing' in html_content:
-            threats.append('🚩 محتوى يشير لبرامج ضارة أو تصيد')
-        
-        # فحص طلبات الإذاذات
-        if 'geolocation' in html_content or 'permission' in html_content:
-            threats.append('⚠️ طلبات أذونات قد تكون مريبة')
+            if 'display:none' in html_content or 'visibility:hidden' in html_content:
+                threats.append('Hidden iframe detected')
         
         return {
             'found': len(threats) > 0,
@@ -273,7 +233,6 @@ def detect_injection_threats(url):
             'count': len(threats)
         }
     except Exception as e:
-        print(f"Injection detection error: {e}")
         return {
             'found': False,
             'threats': [],
@@ -281,7 +240,6 @@ def detect_injection_threats(url):
         }
 
 def get_screenshot_safe(url):
-    """الحصول على صورة آمنة بدون الدخول الفعلي"""
     try:
         response = requests.get(
             f"https://urlscreenshot.com/generate?url={url}&format=png",
@@ -292,40 +250,28 @@ def get_screenshot_safe(url):
         if response.status_code == 200 and len(response.content) > 100:
             return base64.b64encode(response.content).decode()
         else:
-            return get_placeholder_image()
+            return None
     except Exception as e:
-        print(f"Screenshot error: {e}")
-        return get_placeholder_image()
-
-def get_placeholder_image():
-    """صورة placeholder"""
-    placeholder = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
-    return base64.b64encode(placeholder).decode()
+        return None
 
 def calculate_risk(results):
-    """حساب درجة الخطر بطريقة ذكية"""
     risk_score = 0
     
-    # VirusTotal (35 نقطة كحد أقصى)
     vt = results['virustotal']
     if vt['malicious'] > 0:
         risk_score += min(vt['malicious'] * 15, 35)
     elif vt['suspicious'] > 0:
         risk_score += min(vt['suspicious'] * 7, 25)
     
-    # SSL (15 نقطة)
     if not results['ssl_check'].get('valid', False):
         risk_score += 15
     
-    # التحويلات (20 نقطة)
     if results['redirects']['suspicious']:
         risk_score += 20
     
-    # الأنماط المريبة (20 نقطة)
     if results['malicious_patterns']['found']:
         risk_score += min(results['malicious_patterns']['count'] * 7, 20)
     
-    # تهديدات الحقن (10 نقطة)
     if results['injection_check']['found']:
         risk_score += min(results['injection_check']['count'] * 3, 10)
     
@@ -336,3 +282,4 @@ if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     # تشغيل التطبيق على 0.0.0.0 ليقبل الاتصالات الخارجية
     app.run(host='0.0.0.0', port=port)
+  

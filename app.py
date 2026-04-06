@@ -6,8 +6,8 @@ from urllib.parse import urlparse
 import os
 from dotenv import load_dotenv
 import re
-from bs4 import BeautifulSoup
-import hashlib
+import ssl
+import socket
 
 load_dotenv()
 
@@ -17,7 +17,6 @@ CORS(app)
 VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
 VT_API_URL = "https://www.virustotal.com/api/v3"
 
-# استخدام خدمة screenshot بدون الدخول الفعلي
 SCREENSHOT_API = "https://api.screenshotapi.io/capture"
 SCREENSHOT_API_KEY = os.getenv('SCREENSHOT_API_KEY', 'free')
 
@@ -32,7 +31,6 @@ def analyze():
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     
-    # إضافة https إذا لم تكن موجودة
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     
@@ -47,7 +45,6 @@ def analyze():
         'overall_risk': 'SAFE'
     }
     
-    # حساب درجة الخطر
     risk_score = calculate_risk(results)
     results['risk_score'] = risk_score
     
@@ -61,7 +58,7 @@ def analyze():
     return jsonify(results)
 
 def check_virustotal(url):
-    """فحص الرابط في VirusTotal بدون الدخول"""
+    """فحص الرابط في VirusTotal"""
     try:
         if not VIRUSTOTAL_API_KEY:
             return get_dummy_virustotal()
@@ -105,11 +102,7 @@ def get_dummy_virustotal():
 def detect_redirects(url):
     """فحص إعادات التوجيه"""
     try:
-        session = requests.Session()
-        session.max_redirects = 5
-        
-        # فحص بدون متابعة التوجيهات
-        response = requests.head(url, allow_redirects=False, timeout=5, verify=False)
+        response = requests.head(url, allow_redirects=False, timeout=5)
         
         redirects = []
         current_url = url
@@ -125,16 +118,12 @@ def detect_redirects(url):
                 'to': redirect_url
             })
             
-            original_domain = urlparse(url).netloc
-            redirect_domain = urlparse(redirect_url).netloc
-            
             current_url = redirect_url
-            response = requests.head(redirect_url, allow_redirects=False, timeout=5, verify=False)
+            response = requests.head(redirect_url, allow_redirects=False, timeout=5)
             redirect_count += 1
         
         suspicious = False
         if redirects:
-            # تحقق من تغيير النطاق
             original_domain = urlparse(url).netloc
             final_domain = urlparse(current_url).netloc
             suspicious = original_domain != final_domain
@@ -160,9 +149,6 @@ def check_ssl(url):
     """فحص شهادة SSL"""
     try:
         domain = urlparse(url).netloc
-        import ssl
-        import socket
-        
         context = ssl.create_default_context()
         
         try:
@@ -191,33 +177,28 @@ def check_ssl(url):
         }
 
 def detect_malicious_patterns(url):
-    """فحص الأنماط المريبة في الرابط نفسه"""
+    """فحص الأنماط المريبة في الرابط"""
     suspicious_patterns = []
     
-    # أنماط خطيرة في الرابط
     dangerous_keywords = [
-        'bit.ly', 'tinyurl', 'short.link',  # رابط مختصرة مريبة
+        'bit.ly', 'tinyurl', 'short.link',
         'free-', 'download-', 'click-here',
         'confirm-', 'verify-', 'update-',
         'urgent', 'limited-time', 'act-now'
     ]
     
-    # فحص الكلمات المريبة
     url_lower = url.lower()
     for keyword in dangerous_keywords:
         if keyword in url_lower:
             suspicious_patterns.append(f'كلمة مريبة: {keyword}')
     
-    # فحص الأحرف الغريبة أو الترميز
     if '%' in url and len(url.split('%')) > 4:
         suspicious_patterns.append('ترميز غير عادي في الرابط')
     
-    # فحص عدد النقاط (قد يكون عنوان مزيف)
     domains = url.split('/')[-1].split('.')
     if len(domains) > 3:
         suspicious_patterns.append('نطاق معقد غير عادي')
     
-    # فحص أرقام IP بدلاً من النطاق
     domain = urlparse(url).netloc
     if re.match(r'^\d+\.\d+\.\d+\.\d+', domain):
         suspicious_patterns.append('⚠️ استخدام عنوان IP بدلاً من النطاق')
@@ -232,8 +213,6 @@ def get_whois_info(url):
     """معلومات النطاق"""
     try:
         domain = urlparse(url).netloc.replace('www.', '')
-        
-        # محاولة الحصول على معلومات بسيطة
         return {
             'domain': domain,
             'message': f'النطاق: {domain}'
@@ -242,9 +221,8 @@ def get_whois_info(url):
         return {'domain': 'unknown', 'message': 'لم يتمكن من الحصول على المعلومات'}
 
 def get_screenshot_safe(url):
-    """الحصول على صورة بطريقة آمنة بدون الدخول الفعلي"""
+    """الحصول على صورة آمنة"""
     try:
-        # استخدام API مجاني للـ screenshots
         response = requests.get(
             f"https://urlscreenshot.com/generate?url={url}&format=png",
             timeout=15,
@@ -254,38 +232,32 @@ def get_screenshot_safe(url):
         if response.status_code == 200:
             return base64.b64encode(response.content).decode()
         else:
-            # إذا فشلت، استخدم صورة placeholder
             return get_placeholder_image()
     except Exception as e:
         print(f"Screenshot error: {e}")
         return get_placeholder_image()
 
 def get_placeholder_image():
-    """صورة placeholder بسيطة"""
-    # صورة PNG بيضاء 1x1
+    """صورة placeholder"""
     placeholder = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
     return base64.b64encode(placeholder).decode()
 
 def calculate_risk(results):
-    """حساب درجة الخطر الإجمالية"""
+    """حساب درجة الخطر"""
     risk_score = 0
     
-    # VirusTotal (35 نقطة كحد أقصى)
     vt = results['virustotal']
     if vt['malicious'] > 0:
         risk_score += min(vt['malicious'] * 10, 35)
     elif vt['suspicious'] > 0:
         risk_score += min(vt['suspicious'] * 5, 25)
     
-    # SSL (15 نقطة)
     if not results['ssl_check'].get('valid', False):
         risk_score += 15
     
-    # التحويلات (20 نقطة)
     if results['redirects']['suspicious']:
         risk_score += 20
     
-    # الأنماط المريبة (30 نقطة)
     if results['malicious_patterns']['found']:
         risk_score += min(results['malicious_patterns']['count'] * 10, 30)
     

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 AI Security Scanner - فاحص ��لروابط الذكي</title>
+    <title>Security Scanner - Advanced URL Analysis</title>
     <style>
         * {
             margin: 0;
@@ -12,103 +12,71 @@
         }
 
         :root {
-            --primary: #0f0;
-            --dark: #000;
-            --darker: #0a0a0a;
-            --text: #0f0;
-            --success: #0f0;
-            --warning: #ff8800;
-            --danger: #ff0000;
-            --border: 2px solid #0f0;
+            --primary: #1a4d2e;
+            --primary-light: #2d7a4a;
+            --accent: #52b788;
+            --accent-light: #74c69d;
+            --dark: #0f1419;
+            --darker: #0a0d11;
+            --text: #e8f5e9;
+            --text-secondary: #b0d5b8;
+            --border: #2d7a4a;
+            --success: #52b788;
+            --warning: #d4a574;
+            --danger: #c1666b;
         }
 
         body {
-            background: linear-gradient(135deg, #000 0%, #0a0a0a 100%);
+            background: linear-gradient(135deg, var(--darker) 0%, #1a2f24 100%);
             background-attachment: fixed;
-            font-family: 'Courier New', monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             color: var(--text);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            direction: rtl;
-            background-image: 
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="10" cy="10" r="1" fill="%23001a00"/><circle cx="50" cy="50" r="1" fill="%23001a00"/><circle cx="90" cy="90" r="1" fill="%23001a00"/></svg>');
         }
 
         .container {
             width: 100%;
-            max-width: 1200px;
-            background: var(--darker);
-            border: var(--border);
-            border-radius: 8px;
-            padding: 40px;
+            max-width: 1000px;
+            background: rgba(15, 20, 25, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 50px;
             box-shadow: 
-                0 0 40px rgba(0, 255, 0, 0.15),
-                inset 0 0 30px rgba(0, 255, 0, 0.03),
-                0 0 80px rgba(0, 255, 0, 0.1);
-            backdrop-filter: blur(10px);
+                0 20px 60px rgba(45, 122, 74, 0.1),
+                inset 0 1px 0 rgba(82, 183, 136, 0.1);
+            backdrop-filter: blur(20px);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
-            border-bottom: var(--border);
+            margin-bottom: 50px;
+            border-bottom: 1px solid var(--border);
             padding-bottom: 30px;
         }
 
         .header h1 {
-            font-size: 3em;
-            text-shadow: 
-                0 0 10px var(--primary),
-                0 0 20px var(--primary),
-                0 0 30px var(--primary);
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--accent-light);
             margin-bottom: 10px;
-            animation: glow 3s ease-in-out infinite;
-            letter-spacing: 3px;
-        }
-
-        @keyframes glow {
-            0%, 100% { 
-                text-shadow: 0 0 10px var(--primary);
-                color: var(--primary);
-            }
-            50% { 
-                text-shadow: 
-                    0 0 20px var(--primary),
-                    0 0 30px var(--primary),
-                    0 0 40px var(--primary);
-                color: #0ff;
-            }
+            letter-spacing: -0.5px;
         }
 
         .header p {
-            color: #0a0;
-            font-size: 1em;
-            margin-top: 10px;
-        }
-
-        .ai-badge {
-            display: inline-block;
-            background: rgba(0, 255, 0, 0.1);
-            border: 1px solid var(--primary);
-            padding: 8px 16px;
-            border-radius: 20px;
-            margin-top: 15px;
-            font-size: 0.9em;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            font-weight: 300;
+            letter-spacing: 0.5px;
         }
 
         .input-section {
             display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 40px;
             align-items: center;
         }
 
@@ -119,57 +87,53 @@
 
         input[type="text"] {
             width: 100%;
-            padding: 18px;
-            background: rgba(0, 0, 0, 0.5);
-            border: var(--border);
+            padding: 14px 18px;
+            background: rgba(45, 122, 74, 0.08);
+            border: 1px solid var(--border);
             color: var(--text);
-            font-family: 'Courier New', monospace;
-            font-size: 1.1em;
+            font-family: inherit;
+            font-size: 0.95em;
             outline: none;
             transition: all 0.3s ease;
-            border-radius: 5px;
+            border-radius: 8px;
         }
 
         input[type="text"]::placeholder {
-            color: var(--primary);
-            opacity: 0.5;
+            color: var(--text-secondary);
+            opacity: 0.7;
         }
 
         input[type="text"]:focus {
-            box-shadow: 
-                0 0 20px var(--primary),
-                inset 0 0 20px rgba(0, 255, 0, 0.1);
-            border-color: #0ff;
+            background: rgba(45, 122, 74, 0.12);
+            border-color: var(--accent-light);
+            box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.1);
         }
 
         .button-group {
             display: flex;
-            gap: 15px;
+            gap: 10px;
         }
 
         button {
-            padding: 18px 35px;
+            padding: 14px 28px;
             background: var(--primary);
-            color: var(--dark);
-            border: none;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 1.1em;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.95em;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 140px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            min-width: 120px;
+            letter-spacing: 0.3px;
         }
 
         button:hover:not(:disabled) {
-            background: #0ff;
-            box-shadow: 
-                0 0 30px var(--primary),
-                0 0 50px var(--primary);
-            transform: translateY(-3px);
+            background: var(--primary-light);
+            border-color: var(--accent-light);
+            box-shadow: 0 8px 24px rgba(82, 183, 136, 0.15);
+            transform: translateY(-2px);
         }
 
         button:active:not(:disabled) {
@@ -182,23 +146,17 @@
         }
 
         .scan-btn {
-            background: var(--primary);
             flex: 1;
         }
 
         .preview-btn {
-            background: #0a0;
-            min-width: 160px;
-        }
-
-        .preview-btn:hover {
-            background: #0ff;
+            background: var(--primary-light);
         }
 
         .loading {
             display: none;
             text-align: center;
-            margin: 50px 0;
+            margin: 60px 0;
         }
 
         .loading.active {
@@ -207,10 +165,10 @@
 
         .loading-spinner {
             display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--primary);
-            border-top: 3px solid transparent;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -221,23 +179,18 @@
         }
 
         .loading-text {
-            margin-top: 20px;
-            color: var(--primary);
-            font-size: 1.2em;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            margin-top: 16px;
+            color: var(--accent);
+            font-size: 0.9em;
+            font-weight: 500;
         }
 
         .results {
             display: none;
             margin-top: 40px;
-            border-top: var(--border);
-            padding-top: 30px;
-            animation: slideIn 0.5s ease-out;
+            border-top: 1px solid var(--border);
+            padding-top: 40px;
+            animation: slideIn 0.4s ease-out;
         }
 
         .results.active {
@@ -247,7 +200,7 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(15px);
             }
             to {
                 opacity: 1;
@@ -257,51 +210,51 @@
 
         .result-item {
             margin-bottom: 30px;
-            padding: 25px;
-            background: rgba(0, 0, 0, 0.4);
-            border-left: 4px solid var(--primary);
-            border-radius: 5px;
-            border: 1px solid rgba(0, 255, 0, 0.2);
+            padding: 24px;
+            background: rgba(45, 122, 74, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            background: rgba(45, 122, 74, 0.08);
         }
 
         .result-title {
-            font-size: 1.4em;
-            color: var(--primary);
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            font-weight: bold;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
-            letter-spacing: 2px;
+            font-size: 1.1em;
+            color: var(--accent-light);
+            margin-bottom: 18px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
         }
 
         .risk-badge {
             display: inline-block;
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-weight: bold;
-            margin: 15px 0;
-            font-size: 1.1em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 12px 0;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
         }
 
         .risk-safe {
-            background: rgba(0, 255, 0, 0.2);
-            color: var(--success);
-            border: 2px solid var(--success);
+            background: rgba(82, 183, 136, 0.15);
+            color: var(--accent-light);
+            border: 1px solid var(--accent);
         }
 
         .risk-suspicious {
-            background: rgba(255, 136, 0, 0.2);
+            background: rgba(212, 165, 116, 0.15);
             color: var(--warning);
-            border: 2px solid var(--warning);
+            border: 1px solid var(--warning);
         }
 
         .risk-dangerous {
-            background: rgba(255, 0, 0, 0.2);
+            background: rgba(193, 102, 107, 0.15);
             color: var(--danger);
-            border: 2px solid var(--danger);
+            border: 1px solid var(--danger);
         }
 
         .score-container {
@@ -311,78 +264,74 @@
         .score-label {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 1em;
+            margin-bottom: 8px;
+            font-size: 0.9em;
         }
 
         .score-value {
-            color: var(--primary);
-            font-weight: bold;
-            font-size: 1.3em;
+            color: var(--accent-light);
+            font-weight: 600;
+            font-size: 1.1em;
         }
 
         .score-bar {
             width: 100%;
-            height: 15px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
+            height: 6px;
+            background: rgba(45, 122, 74, 0.2);
+            border-radius: 3px;
             overflow: hidden;
-            margin: 15px 0;
-            border: 1px solid var(--primary);
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            margin: 10px 0;
         }
 
         .score-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--success), var(--success));
-            transition: all 0.5s ease;
-            border-radius: 10px;
-            box-shadow: 0 0 20px var(--success);
+            background: linear-gradient(90deg, var(--success) 0%, var(--accent-light) 100%);
+            transition: width 0.5s ease;
+            border-radius: 3px;
         }
 
         .score-fill.suspicious {
-            background: linear-gradient(90deg, var(--warning), #ff6600);
-            box-shadow: 0 0 20px var(--warning);
+            background: linear-gradient(90deg, var(--warning) 0%, #e8b982 100%);
         }
 
         .score-fill.dangerous {
-            background: linear-gradient(90deg, var(--danger), #ff3300);
-            box-shadow: 0 0 20px var(--danger);
+            background: linear-gradient(90deg, var(--danger) 0%, #d97d82 100%);
         }
 
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
         }
 
         .stat-box {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
-            border-radius: 5px;
+            background: rgba(45, 122, 74, 0.08);
+            padding: 16px;
+            border-radius: 8px;
             text-align: center;
-            border: 1px solid rgba(0, 255, 0, 0.2);
+            border: 1px solid var(--border);
             transition: all 0.3s ease;
         }
 
         .stat-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+            background: rgba(45, 122, 74, 0.12);
+            transform: translateY(-2px);
         }
 
         .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 5px;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 4px;
         }
 
         .stat-label {
-            font-size: 0.85em;
-            color: #0a0;
+            font-size: 0.75em;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            font-weight: 500;
         }
 
         .stat-box.malicious .stat-number {
@@ -398,13 +347,13 @@
         }
 
         .threat-item {
-            padding: 12px;
-            margin: 10px 0;
-            background: rgba(0, 0, 0, 0.4);
-            border-left: 3px solid var(--danger);
-            border-radius: 3px;
-            color: #ff6666;
-            font-weight: bold;
+            padding: 10px 12px;
+            margin: 8px 0;
+            background: rgba(193, 102, 107, 0.08);
+            border-left: 2px solid var(--danger);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 0.9em;
         }
 
         .info-list {
@@ -412,105 +361,90 @@
         }
 
         .info-item {
-            padding: 12px;
-            margin: 10px 0;
-            background: rgba(0, 0, 0, 0.4);
-            border-left: 3px solid var(--primary);
-            border-radius: 3px;
+            padding: 10px 12px;
+            margin: 8px 0;
+            background: rgba(82, 183, 136, 0.05);
+            border-left: 2px solid var(--accent);
+            border-radius: 4px;
             color: var(--text);
             word-break: break-all;
+            font-size: 0.9em;
         }
 
         .redirect-chain {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 20px;
-            border-radius: 5px;
-            border: 1px solid rgba(255, 136, 0, 0.3);
+            background: rgba(212, 165, 116, 0.08);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.2);
         }
 
         .redirect-url {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 3px;
-            color: #0a0;
+            background: rgba(45, 122, 74, 0.12);
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-radius: 4px;
+            color: var(--text-secondary);
             word-break: break-all;
-            font-size: 0.9em;
-            border-left: 3px solid var(--warning);
+            font-size: 0.85em;
+            border-left: 2px solid var(--warning);
         }
 
         .redirect-arrow {
             text-align: center;
             color: var(--warning);
-            font-weight: bold;
-            margin: 8px 0;
-            font-size: 1.5em;
+            font-weight: 500;
+            margin: 6px 0;
+            font-size: 0.8em;
         }
 
         .screenshot-section {
-            margin-top: 20px;
+            margin-top: 16px;
         }
 
         .screenshot-img {
             max-width: 100%;
-            border: 2px solid var(--primary);
-            border-radius: 5px;
-            max-height: 500px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-height: 400px;
             background: var(--darker);
-            margin-top: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+            margin-top: 12px;
         }
 
         .error-message {
-            padding: 20px;
-            background: rgba(255, 0, 0, 0.1);
-            border-left: 4px solid var(--danger);
-            border-radius: 5px;
-            color: #ff6666;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-
-        .success-message {
-            padding: 20px;
-            background: rgba(0, 255, 0, 0.1);
-            border-left: 4px solid var(--primary);
-            border-radius: 5px;
-            color: var(--primary);
-            margin: 20px 0;
-            font-weight: bold;
-        }
-
-        .ai-analysis {
-            background: rgba(0, 255, 0, 0.05);
-            border: 2px solid var(--primary);
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-
-        .ai-label {
-            color: var(--primary);
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-transform: uppercase;
+            padding: 16px;
+            background: rgba(193, 102, 107, 0.1);
+            border-left: 2px solid var(--danger);
+            border-radius: 6px;
+            color: var(--text);
+            margin: 16px 0;
+            font-size: 0.9em;
         }
 
         code {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 3px 8px;
+            background: rgba(45, 122, 74, 0.1);
+            padding: 2px 6px;
             border-radius: 3px;
-            color: #0a0;
-            font-size: 0.9em;
+            color: var(--accent-light);
+            font-size: 0.85em;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.85em;
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 20px;
+                padding: 30px;
             }
 
             .header h1 {
-                font-size: 2em;
+                font-size: 1.8em;
             }
 
             .input-section {
@@ -529,28 +463,14 @@
             .stat-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
-            .result-item {
-                padding: 15px;
-            }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: var(--border);
-            color: #0a0;
-            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 AI SECURITY SCANNER</h1>
-            <p>فاحص الروابط الذكي - فحص آمن بدون الدخول الفعلي</p>
-            <div class="ai-badge">🤖 تحليل ذكي مدعوم بـ AI</div>
+            <h1>Security Scanner</h1>
+            <p>Advanced URL Threat Analysis & Detection</p>
         </div>
 
         <div class="input-section">
@@ -558,26 +478,25 @@
                 <input 
                     type="text" 
                     id="urlInput" 
-                    placeholder="أدخل الرابط (مثال: https://example.com أو example.com)"
+                    placeholder="Enter URL (e.g., https://example.com)"
                     autocomplete="off"
                 >
             </div>
             <div class="button-group">
-                <button class="scan-btn" onclick="scanURL()">🔍 فحص ذكي</button>
-                <button class="preview-btn" onclick="previewURL()">👁️ معاينة</button>
+                <button class="scan-btn" onclick="scanURL()">Scan URL</button>
+                <button class="preview-btn" onclick="previewURL()">Preview</button>
             </div>
         </div>
 
         <div class="loading" id="loading">
             <div class="loading-spinner"></div>
-            <div class="loading-text">🤖 الذكاء الاصطناعي يقوم بالفحص...</div>
+            <div class="loading-text">Analyzing URL...</div>
         </div>
 
         <div class="results" id="results"></div>
 
         <div class="footer">
-            <p>🛡️ فاحص روابط آمن - لا يتم الدخول الفعلي للموقع</p>
-            <p>⚡ تحليل فوري مدعوم بـ VirusTotal و AI</p>
+            <p>Safe & Secure Analysis - No Direct Access Required</p>
         </div>
     </div>
 
@@ -588,7 +507,7 @@
             const url = document.getElementById('urlInput').value.trim();
             
             if (!url) {
-                showError('❌ الرجاء إدخال رابط صحيح!');
+                showError('Please enter a valid URL');
                 return;
             }
 
@@ -608,13 +527,13 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`خطأ: ${response.statusText}`);
+                    throw new Error(`Error: ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 displayResults(data);
             } catch (error) {
-                showError(`❌ خطأ في الاتصال: ${error.message}`);
+                showError(`Connection Error: ${error.message}`);
                 console.error('Error:', error);
             } finally {
                 loading.classList.remove('active');
@@ -625,7 +544,7 @@
             const url = document.getElementById('urlInput').value.trim();
             
             if (!url) {
-                showError('❌ الرجاء إدخال رابط صحيح!');
+                showError('Please enter a valid URL');
                 return;
             }
 
@@ -637,108 +556,89 @@
             const resultsDiv = document.getElementById('results');
             let html = '';
 
-            // درجة الخطر
             const riskClass = data.overall_risk === 'SAFE' ? 'safe' : 
                             data.overall_risk === 'SUSPICIOUS' ? 'suspicious' : 'dangerous';
-            const riskEmoji = data.overall_risk === 'SAFE' ? '✅' : 
-                            data.overall_risk === 'SUSPICIOUS' ? '⚠️' : '🚨';
 
             html += `
-                <div class="result-item ai-analysis">
-                    <div class="result-title">${riskEmoji} التقييم العام (AI Analysis)</div>
+                <div class="result-item">
+                    <div class="result-title">Risk Assessment</div>
                     <div class="risk-badge risk-${riskClass}">
                         ${data.overall_risk}
                     </div>
                     <div class="score-container">
                         <div class="score-label">
-                            <span>درجة الخطر:</span>
+                            <span>Risk Score</span>
                             <span class="score-value">${data.risk_score}/100</span>
                         </div>
                         <div class="score-bar">
                             <div class="score-fill ${riskClass}" style="width: ${data.risk_score}%"></div>
                         </div>
                     </div>
-                    <p style="margin-top: 15px; color: #0a0;">
-                        ${getRiskDescription(data.overall_risk, data.risk_score)}
-                    </p>
                 </div>
             `;
 
-            // VirusTotal
             if (data.virustotal) {
                 html += `
                     <div class="result-item">
-                        <div class="result-title">🛡️ فحص VirusTotal</div>
+                        <div class="result-title">VirusTotal Analysis</div>
                         <div class="stat-grid">
                             <div class="stat-box malicious">
                                 <div class="stat-number">${data.virustotal.malicious}</div>
-                                <div class="stat-label">محتوى خطير</div>
+                                <div class="stat-label">Malicious</div>
                             </div>
                             <div class="stat-box suspicious">
                                 <div class="stat-number">${data.virustotal.suspicious}</div>
-                                <div class="stat-label">مريب</div>
+                                <div class="stat-label">Suspicious</div>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-number">${data.virustotal.harmless}</div>
-                                <div class="stat-label">آمن</div>
+                                <div class="stat-label">Safe</div>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-number">${data.virustotal.undetected}</div>
-                                <div class="stat-label">لم يُكتشف</div>
+                                <div class="stat-label">Undetected</div>
                             </div>
                         </div>
-                        <p style="margin-top: 15px; font-size: 0.9em; color: #0a0;">
-                            تم فحص الرابط بواسطة ${data.virustotal.total_vendors || 0} محرك كشف
-                        </p>
                     </div>
                 `;
             }
 
-            // SSL Check
             if (data.ssl_check) {
-                const sslIcon = data.ssl_check.valid ? '✅' : '⚠️';
                 html += `
                     <div class="result-item">
-                        <div class="result-title">${sslIcon} فحص شهادة SSL</div>
+                        <div class="result-title">SSL Certificate</div>
                         <ul class="info-list">
                             <li class="info-item">${data.ssl_check.message}</li>
-                            ${data.ssl_check.issuer ? `<li class="info-item">الناشر: <strong>${data.ssl_check.issuer}</strong></li>` : ''}
-                            ${data.ssl_check.subject ? `<li class="info-item">النطاق: <strong>${data.ssl_check.subject}</strong></li>` : ''}
+                            ${data.ssl_check.issuer ? `<li class="info-item">Issuer: ${data.ssl_check.issuer}</li>` : ''}
                         </ul>
                     </div>
                 `;
             }
 
-            // التحويلات
-            if (data.redirects) {
+            if (data.redirects && data.redirects.found) {
                 html += `
                     <div class="result-item">
-                        <div class="result-title">${data.redirects.suspicious ? '⚠️' : '✅'} إعادة التوجيه</div>
-                        <p style="margin-bottom: 15px; font-weight: bold;">${data.redirects.message}</p>
+                        <div class="result-title">Redirects</div>
+                        <div class="redirect-chain">
                 `;
                 
-                if (data.redirects.redirects && data.redirects.redirects.length > 0) {
-                    html += `<div class="redirect-chain">`;
-                    data.redirects.redirects.forEach((redirect, index) => {
-                        html += `
-                            <div class="redirect-url">${redirect.from}</div>
-                            <div class="redirect-arrow">⬇️</div>
-                        `;
-                    });
+                data.redirects.redirects.forEach((redirect) => {
                     html += `
+                        <div class="redirect-url">${redirect.from}</div>
+                        <div class="redirect-arrow">→</div>
+                    `;
+                });
+                html += `
                         <div class="redirect-url">${data.redirects.redirects[data.redirects.redirects.length - 1].to}</div>
                         </div>
-                    `;
-                }
-                
-                html += `</div>`;
+                    </div>
+                `;
             }
 
-            // الأنماط المريبة
             if (data.malicious_patterns && data.malicious_patterns.found) {
                 html += `
                     <div class="result-item">
-                        <div class="result-title">🔍 الأنماط المريبة المكتشفة</div>
+                        <div class="result-title">Detected Patterns</div>
                         <ul class="threat-list">
                 `;
                 
@@ -749,11 +649,10 @@
                 html += `</ul></div>`;
             }
 
-            // تهديدات الحقن
             if (data.injection_check && data.injection_check.found) {
                 html += `
                     <div class="result-item">
-                        <div class="result-title">⚡ تهديدات الحقن والملفات</div>
+                        <div class="result-title">Injection Threats</div>
                         <ul class="threat-list">
                 `;
                 
@@ -764,12 +663,10 @@
                 html += `</ul></div>`;
             }
 
-            // الصورة
             if (data.screenshot) {
                 html += `
                     <div class="result-item screenshot-section">
-                        <div class="result-title">📸 معاينة الموقع</div>
-                        <p style="margin-bottom: 15px; color: #0a0;">تم التقاط لقطة آمنة من واجهة الموقع</p>
+                        <div class="result-title">Website Preview</div>
                         <img src="data:image/png;base64,${data.screenshot}" alt="Website Screenshot" class="screenshot-img">
                     </div>
                 `;
@@ -777,16 +674,6 @@
 
             resultsDiv.innerHTML = html;
             resultsDiv.classList.add('active');
-        }
-
-        function getRiskDescription(risk, score) {
-            if (risk === 'SAFE') {
-                return `✅ الموقع آمن تماماً - درجة الثقة عالية جداً`;
-            } else if (risk === 'SUSPICIOUS') {
-                return `⚠️ الموقع يحتوي على بعض المؤشرات المريبة - توخ الحذر`;
-            } else {
-                return `🚨 الموقع خطير جداً - تجنب الدخول أو إدخال بيانات شخصية`;
-            }
         }
 
         function showError(message) {
@@ -801,7 +688,6 @@
             }
         });
 
-        // Focus على input عند التحميل
         window.addEventListener('load', function() {
             document.getElementById('urlInput').focus();
         });

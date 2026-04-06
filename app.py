@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import re
 import ssl
 import socket
+from datetime import datetime
 
 load_dotenv()
 
@@ -17,34 +18,35 @@ CORS(app)
 VIRUSTOTAL_API_KEY = os.getenv('VIRUSTOTAL_API_KEY')
 VT_API_URL = "https://www.virustotal.com/api/v3"
 
-SCREENSHOT_API = "https://api.screenshotapi.io/capture"
-SCREENSHOT_API_KEY = os.getenv('SCREENSHOT_API_KEY', 'free')
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    """تحليل الرابط بشكل ذكي"""
     url = request.json.get('url')
     
     if not url:
         return jsonify({'error': 'URL is required'}), 400
     
+    # إضافة https
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     
     results = {
         'url': url,
         'virustotal': check_virustotal(url),
-        'whois_info': get_whois_info(url),
         'redirects': detect_redirects(url),
         'ssl_check': check_ssl(url),
         'malicious_patterns': detect_malicious_patterns(url),
+        'injection_check': detect_injection_threats(url),
         'screenshot': get_screenshot_safe(url),
-        'overall_risk': 'SAFE'
+        'overall_risk': 'SAFE',
+        'timestamp': datetime.now().isoformat()
     }
     
+    # حساب درجة الخطر
     risk_score = calculate_risk(results)
     results['risk_score'] = risk_score
     
@@ -61,7 +63,14 @@ def check_virustotal(url):
     """فحص الرابط في VirusTotal"""
     try:
         if not VIRUSTOTAL_API_KEY:
-            return get_dummy_virustotal()
+            return {
+                'malicious': 0,
+                'suspicious': 0,
+                'undetected': 0,
+                'harmless': 0,
+                'total_vendors': 0,
+                'source': 'offline'
+            }
         
         headers = {"x-apikey": VIRUSTOTAL_API_KEY}
         url_id = base64.urlsafe_b64encode(url.encode()).decode().rstrip("=")
@@ -81,28 +90,33 @@ def check_virustotal(url):
                 'suspicious': stats.get('suspicious', 0),
                 'undetected': stats.get('undetected', 0),
                 'harmless': stats.get('harmless', 0),
-                'total_vendors': sum(stats.values())
+                'total_vendors': sum(stats.values()),
+                'source': 'virustotal'
             }
         else:
-            return get_dummy_virustotal()
+            return {
+                'malicious': 0,
+                'suspicious': 0,
+                'undetected': 0,
+                'harmless': 0,
+                'total_vendors': 0,
+                'source': 'offline'
+            }
     except Exception as e:
         print(f"VirusTotal Error: {e}")
-        return get_dummy_virustotal()
-
-def get_dummy_virustotal():
-    """قيم افتراضية للفحص المحلي"""
-    return {
-        'malicious': 0,
-        'suspicious': 0,
-        'undetected': 0,
-        'harmless': 0,
-        'total_vendors': 0
-    }
+        return {
+            'malicious': 0,
+            'suspicious': 0,
+            'undetected': 0,
+            'harmless': 0,
+            'total_vendors': 0,
+            'source': 'error'
+        }
 
 def detect_redirects(url):
-    """فحص إعادات التوجيه"""
+    """فحص إعادات التوجيه المريبة"""
     try:
-        response = requests.head(url, allow_redirects=False, timeout=5)
+        response = requests.head(url, allow_redirects=False, timeout=5, verify=True)
         
         redirects = []
         current_url = url
@@ -119,7 +133,7 @@ def detect_redirects(url):
             })
             
             current_url = redirect_url
-            response = requests.head(redirect_url, allow_redirects=False, timeout=5)
+            response = requests.head(redirect_url, allow_redirects=False, timeout=5, verify=True)
             redirect_count += 1
         
         suspicious = False
@@ -181,27 +195,36 @@ def detect_malicious_patterns(url):
     suspicious_patterns = []
     
     dangerous_keywords = [
-        'bit.ly', 'tinyurl', 'short.link',
-        'free-', 'download-', 'click-here',
-        'confirm-', 'verify-', 'update-',
-        'urgent', 'limited-time', 'act-now'
+        'bit.ly', 'tinyurl', 'short.link', 'goo.gl',
+        'free-', 'download-', 'click-here', 'free-download',
+        'confirm-', 'verify-', 'update-', 'urgent',
+        'limited-time', 'act-now', 'pay-now', 'claim-prize',
+        'win-', 'earn-', 'get-rich', 'crypto', 'bitcoin'
     ]
     
     url_lower = url.lower()
     for keyword in dangerous_keywords:
         if keyword in url_lower:
-            suspicious_patterns.append(f'كلمة مريبة: {keyword}')
+            suspicious_patterns.append(f'🚩 كلمة مريبة: {keyword}')
     
+    # فحص الترميز الغريب
     if '%' in url and len(url.split('%')) > 4:
-        suspicious_patterns.append('ترميز غير عادي في الرابط')
+        suspicious_patterns.append('🚩 ترميز غير عادي في الرابط')
     
+    # فحص عدد النقاط
     domains = url.split('/')[-1].split('.')
     if len(domains) > 3:
-        suspicious_patterns.append('نطاق معقد غير عادي')
+        suspicious_patterns.append('🚩 نطاق معقد غير عادي')
     
+    # فحص استخدام IP بدلاً من النطاق
     domain = urlparse(url).netloc
     if re.match(r'^\d+\.\d+\.\d+\.\d+', domain):
-        suspicious_patterns.append('⚠️ استخدام عنوان IP بدلاً من النطاق')
+        suspicious_patterns.append('🚩 استخدام عنوان IP بدلاً من النطاق')
+    
+    # فحص الأحرف المشابهة
+    if 'google.com' in url_lower or 'facebook.com' in url_lower or 'amazon.com' in url_lower:
+        if domain not in ['google.com', 'www.google.com', 'facebook.com', 'www.facebook.com', 'amazon.com', 'www.amazon.com']:
+            suspicious_patterns.append('🚩 تقليد موقع شهير')
     
     return {
         'found': len(suspicious_patterns) > 0,
@@ -209,19 +232,56 @@ def detect_malicious_patterns(url):
         'count': len(suspicious_patterns)
     }
 
-def get_whois_info(url):
-    """معلومات النطاق"""
+def detect_injection_threats(url):
+    """فحص تهديدات الحقن والملفات الخطيرة"""
+    threats = []
+    
     try:
-        domain = urlparse(url).netloc.replace('www.', '')
+        response = requests.get(url, timeout=10, allow_redirects=True)
+        html_content = response.text.lower()
+        
+        # فحص الـ JavaScript المريب
+        if '<script' in html_content:
+            threats.append('⚠️ تطبيقات JavaScript قد تكون خطيرة')
+        
+        # فحص eval
+        if 'eval(' in html_content:
+            threats.append('🚩 كود Eval خطير جداً')
+        
+        # فحص document.write
+        if 'document.write' in html_content:
+            threats.append('⚠️ تعديل صفحة DOM قد يكون خطيراً')
+        
+        # فحص الـ iFrames المخفية
+        if '<iframe' in html_content:
+            if 'display:none' in html_content or 'visibility:hidden' in html_content or 'width:0' in html_content:
+                threats.append('🚩 iFrame مخفي قد يحمل برامج ضارة')
+            else:
+                threats.append('⚠️ وجود iFrame قد يحمل محتوى غير آمن')
+        
+        # فحص البرامج المسيئة
+        if 'malware' in html_content or 'phishing' in html_content:
+            threats.append('🚩 محتوى يشير لبرامج ضارة أو تصيد')
+        
+        # فحص طلبات الإذاذات
+        if 'geolocation' in html_content or 'permission' in html_content:
+            threats.append('⚠️ طلبات أذونات قد تكون مريبة')
+        
         return {
-            'domain': domain,
-            'message': f'النطاق: {domain}'
+            'found': len(threats) > 0,
+            'threats': threats,
+            'count': len(threats)
         }
     except Exception as e:
-        return {'domain': 'unknown', 'message': 'لم يتمكن من الحصول على المعلومات'}
+        print(f"Injection detection error: {e}")
+        return {
+            'found': False,
+            'threats': [],
+            'count': 0
+        }
 
 def get_screenshot_safe(url):
-    """الحصول على صورة آمنة"""
+    """الحصول على صورة آمنة بدون الدخول الفعلي"""
     try:
         response = requests.get(
             f"https://urlscreenshot.com/generate?url={url}&format=png",
@@ -229,7 +289,7 @@ def get_screenshot_safe(url):
             headers={'User-Agent': 'Mozilla/5.0'}
         )
         
-        if response.status_code == 200:
+        if response.status_code == 200 and len(response.content) > 100:
             return base64.b64encode(response.content).decode()
         else:
             return get_placeholder_image()
@@ -243,26 +303,36 @@ def get_placeholder_image():
     return base64.b64encode(placeholder).decode()
 
 def calculate_risk(results):
-    """حساب درجة الخطر"""
+    """حساب درجة الخطر بطريقة ذكية"""
     risk_score = 0
     
+    # VirusTotal (35 نقطة كحد أقصى)
     vt = results['virustotal']
     if vt['malicious'] > 0:
-        risk_score += min(vt['malicious'] * 10, 35)
+        risk_score += min(vt['malicious'] * 15, 35)
     elif vt['suspicious'] > 0:
-        risk_score += min(vt['suspicious'] * 5, 25)
+        risk_score += min(vt['suspicious'] * 7, 25)
     
+    # SSL (15 نقطة)
     if not results['ssl_check'].get('valid', False):
         risk_score += 15
     
+    # التحويلات (20 نقطة)
     if results['redirects']['suspicious']:
         risk_score += 20
     
+    # الأنماط المريبة (20 نقطة)
     if results['malicious_patterns']['found']:
-        risk_score += min(results['malicious_patterns']['count'] * 10, 30)
+        risk_score += min(results['malicious_patterns']['count'] * 7, 20)
+    
+    # تهديدات الحقن (10 نقطة)
+    if results['injection_check']['found']:
+        risk_score += min(results['injection_check']['count'] * 3, 10)
     
     return min(int(risk_score), 100)
 
 if __name__ == '__main__':
+    # جلب المنفذ من إعدادات السيرفر، وإذا لم يوجد يستخدم 5000 كاحتياط
     port = int(os.environ.get("PORT", 5000))
+    # تشغيل التطبيق على 0.0.0.0 ليقبل الاتصالات الخارجية
     app.run(host='0.0.0.0', port=port)

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 AI Security Scanner - فاحص ��لروابط الذكي</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0f0;
+            --dark: #000;
+            --darker: #0a0a0a;
+            --text: #0f0;
+            --success: #0f0;
+            --warning: #ff8800;
+            --danger: #ff0000;
+            --border: 2px solid #0f0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #000 0%, #0a0a0a 100%);
+            background-attachment: fixed;
+            font-family: 'Courier New', monospace;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            direction: rtl;
+            background-image: 
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="10" cy="10" r="1" fill="%23001a00"/><circle cx="50" cy="50" r="1" fill="%23001a00"/><circle cx="90" cy="90" r="1" fill="%23001a00"/></svg>');
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--darker);
+            border: var(--border);
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 
+                0 0 40px rgba(0, 255, 0, 0.15),
+                inset 0 0 30px rgba(0, 255, 0, 0.03),
+                0 0 80px rgba(0, 255, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: var(--border);
+            padding-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            text-shadow: 
+                0 0 10px var(--primary),
+                0 0 20px var(--primary),
+                0 0 30px var(--primary);
+            margin-bottom: 10px;
+            animation: glow 3s ease-in-out infinite;
+            letter-spacing: 3px;
+        }
+
+        @keyframes glow {
+            0%, 100% { 
+                text-shadow: 0 0 10px var(--primary);
+                color: var(--primary);
+            }
+            50% { 
+                text-shadow: 
+                    0 0 20px var(--primary),
+                    0 0 30px var(--primary),
+                    0 0 40px var(--primary);
+                color: #0ff;
+            }
+        }
+
+        .header p {
+            color: #0a0;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid var(--primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .input-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.5);
+            border: var(--border);
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            outline: none;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--primary);
+            opacity: 0.5;
+        }
+
+        input[type="text"]:focus {
+            box-shadow: 
+                0 0 20px var(--primary),
+                inset 0 0 20px rgba(0, 255, 0, 0.1);
+            border-color: #0ff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            padding: 18px 35px;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        button:hover:not(:disabled) {
+            background: #0ff;
+            box-shadow: 
+                0 0 30px var(--primary),
+                0 0 50px var(--primary);
+            transform: translateY(-3px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .scan-btn {
+            background: var(--primary);
+            flex: 1;
+        }
+
+        .preview-btn {
+            background: #0a0;
+            min-width: 160px;
+        }
+
+        .preview-btn:hover {
+            background: #0ff;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 50px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--primary);
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--primary);
+            font-size: 1.2em;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .results {
+            display: none;
+            margin-top: 40px;
+            border-top: var(--border);
+            padding-top: 30px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-item {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 4px solid var(--primary);
+            border-radius: 5px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .result-title {
+            font-size: 1.4em;
+            color: var(--primary);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+            letter-spacing: 2px;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 15px 0;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .risk-safe {
+            background: rgba(0, 255, 0, 0.2);
+            color: var(--success);
+            border: 2px solid var(--success);
+        }
+
+        .risk-suspicious {
+            background: rgba(255, 136, 0, 0.2);
+            color: var(--warning);
+            border: 2px solid var(--warning);
+        }
+
+        .risk-dangerous {
+            background: rgba(255, 0, 0, 0.2);
+            color: var(--danger);
+            border: 2px solid var(--danger);
+        }
+
+        .score-container {
+            margin: 20px 0;
+        }
+
+        .score-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .score-value {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            border: 1px solid var(--primary);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--success));
+            transition: all 0.5s ease;
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--success);
+        }
+
+        .score-fill.suspicious {
+            background: linear-gradient(90deg, var(--warning), #ff6600);
+            box-shadow: 0 0 20px var(--warning);
+        }
+
+        .score-fill.dangerous {
+            background: linear-gradient(90deg, var(--danger), #ff3300);
+            box-shadow: 0 0 20px var(--danger);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #0a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-box.malicious .stat-number {
+            color: var(--danger);
+        }
+
+        .stat-box.suspicious .stat-number {
+            color: var(--warning);
+        }
+
+        .threat-list {
+            list-style: none;
+        }
+
+        .threat-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--danger);
+            border-radius: 3px;
+            color: #ff6666;
+            font-weight: bold;
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 3px solid var(--primary);
+            border-radius: 3px;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .redirect-chain {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 136, 0, 0.3);
+        }
+
+        .redirect-url {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            color: #0a0;
+            word-break: break-all;
+            font-size: 0.9em;
+            border-left: 3px solid var(--warning);
+        }
+
+        .redirect-arrow {
+            text-align: center;
+            color: var(--warning);
+            font-weight: bold;
+            margin: 8px 0;
+            font-size: 1.5em;
+        }
+
+        .screenshot-section {
+            margin-top: 20px;
+        }
+
+        .screenshot-img {
+            max-width: 100%;
+            border: 2px solid var(--primary);
+            border-radius: 5px;
+            max-height: 500px;
+            background: var(--darker);
+            margin-top: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .error-message {
+            padding: 20px;
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid var(--danger);
+            border-radius: 5px;
+            color: #ff6666;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .success-message {
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 4px solid var(--primary);
+            border-radius: 5px;
+            color: var(--primary);
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .ai-analysis {
+            background: rgba(0, 255, 0, 0.05);
+            border: 2px solid var(--primary);
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .ai-label {
+            color: var(--primary);
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: #0a0;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .input-section {
+                flex-direction: column;
+            }
+
+            .button-group {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .result-item {
+                padding: 15px;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: var(--border);
+            color: #0a0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 AI SECURITY SCANNER</h1>
+            <p>فاحص الروابط الذكي - فحص آمن بدون الدخول الفعلي</p>
+            <div class="ai-badge">🤖 تحليل ذكي مدعوم بـ AI</div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="urlInput" 
+                    placeholder="أدخل الرابط (مثال: https://example.com أو example.com)"
+                    autocomplete="off"
+                >
+            </div>
+            <div class="button-group">
+                <button class="scan-btn" onclick="scanURL()">🔍 فحص ذكي</button>
+                <button class="preview-btn" onclick="previewURL()">👁️ معاينة</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">🤖 الذكاء الاصطناعي يقوم بالفحص...</div>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="footer">
+            <p>🛡️ فاحص روابط آمن - لا يتم الدخول الفعلي للموقع</p>
+            <p>⚡ تحليل فوري مدعوم بـ VirusTotal و AI</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+
+        async function scanURL() {
+            const url = document.getElementById('urlInput').value.trim();
+            
+            if (!url) {
+                showError('❌ الرجاء إدخال رابط صحيح!');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+
+            loading.classList.add('active');
+            results.classList.remove('active');
+
+            try {
+                const response = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`خطأ: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showError(`❌ خطأ في الاتصال: ${error.message}`);
+                console.error('Error:', error);
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        function previewURL() {
+            const url = document.getElementById('urlInput').value.trim();
+            
+            if (!url) {
+                showError('❌ الرجاء إدخال رابط صحيح!');
+                return;
+            }
+
+            const fullURL = url.startsWith(('http://', 'https://')) ? url : 'https://' + url;
+            window.open(fullURL, '_blank');
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+
+            // درجة الخطر
+            const riskClass = data.overall_risk === 'SAFE' ? 'safe' : 
+                            data.overall_risk === 'SUSPICIOUS' ? 'suspicious' : 'dangerous';
+            const riskEmoji = data.overall_risk === 'SAFE' ? '✅' : 
+                            data.overall_risk === 'SUSPICIOUS' ? '⚠️' : '🚨';
+
+            html += `
+                <div class="result-item ai-analysis">
+                    <div class="result-title">${riskEmoji} التقييم العام (AI Analysis)</div>
+                    <div class="risk-badge risk-${riskClass}">
+                        ${data.overall_risk}
+                    </div>
+                    <div class="score-container">
+                        <div class="score-label">
+                            <span>درجة الخطر:</span>
+                            <span class="score-value">${data.risk_score}/100</span>
+                        </div>
+                        <div class="score-bar">
+                            <div class="score-fill ${riskClass}" style="width: ${data.risk_score}%"></div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 15px; color: #0a0;">
+                        ${getRiskDescription(data.overall_risk, data.risk_score)}
+                    </p>
+                </div>
+            `;
+
+            // VirusTotal
+            if (data.virustotal) {
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">🛡️ فحص VirusTotal</div>
+                        <div class="stat-grid">
+                            <div class="stat-box malicious">
+                                <div class="stat-number">${data.virustotal.malicious}</div>
+                                <div class="stat-label">محتوى خطير</div>
+                            </div>
+                            <div class="stat-box suspicious">
+                                <div class="stat-number">${data.virustotal.suspicious}</div>
+                                <div class="stat-label">مريب</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number">${data.virustotal.harmless}</div>
+                                <div class="stat-label">آمن</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number">${data.virustotal.undetected}</div>
+                                <div class="stat-label">لم يُكتشف</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #0a0;">
+                            تم فحص الرابط بواسطة ${data.virustotal.total_vendors || 0} محرك كشف
+                        </p>
+                    </div>
+                `;
+            }
+
+            // SSL Check
+            if (data.ssl_check) {
+                const sslIcon = data.ssl_check.valid ? '✅' : '⚠️';
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">${sslIcon} فحص شهادة SSL</div>
+                        <ul class="info-list">
+                            <li class="info-item">${data.ssl_check.message}</li>
+                            ${data.ssl_check.issuer ? `<li class="info-item">الناشر: <strong>${data.ssl_check.issuer}</strong></li>` : ''}
+                            ${data.ssl_check.subject ? `<li class="info-item">النطاق: <strong>${data.ssl_check.subject}</strong></li>` : ''}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // التحويلات
+            if (data.redirects) {
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">${data.redirects.suspicious ? '⚠️' : '✅'} إعادة التوجيه</div>
+                        <p style="margin-bottom: 15px; font-weight: bold;">${data.redirects.message}</p>
+                `;
+                
+                if (data.redirects.redirects && data.redirects.redirects.length > 0) {
+                    html += `<div class="redirect-chain">`;
+                    data.redirects.redirects.forEach((redirect, index) => {
+                        html += `
+                            <div class="redirect-url">${redirect.from}</div>
+                            <div class="redirect-arrow">⬇️</div>
+                        `;
+                    });
+                    html += `
+                        <div class="redirect-url">${data.redirects.redirects[data.redirects.redirects.length - 1].to}</div>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+
+            // الأنماط المريبة
+            if (data.malicious_patterns && data.malicious_patterns.found) {
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">🔍 الأنماط المريبة المكتشفة</div>
+                        <ul class="threat-list">
+                `;
+                
+                data.malicious_patterns.patterns.forEach(pattern => {
+                    html += `<li class="threat-item">${pattern}</li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            // تهديدات الحقن
+            if (data.injection_check && data.injection_check.found) {
+                html += `
+                    <div class="result-item">
+                        <div class="result-title">⚡ تهديدات الحقن والملفات</div>
+                        <ul class="threat-list">
+                `;
+                
+                data.injection_check.threats.forEach(threat => {
+                    html += `<li class="threat-item">${threat}</li>`;
+                });
+                
+                html += `</ul></div>`;
+            }
+
+            // الصورة
+            if (data.screenshot) {
+                html += `
+                    <div class="result-item screenshot-section">
+                        <div class="result-title">📸 معاينة الموقع</div>
+                        <p style="margin-bottom: 15px; color: #0a0;">تم التقاط لقطة آمنة من واجهة الموقع</p>
+                        <img src="data:image/png;base64,${data.screenshot}" alt="Website Screenshot" class="screenshot-img">
+                    </div>
+                `;
+            }
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('active');
+        }
+
+        function getRiskDescription(risk, score) {
+            if (risk === 'SAFE') {
+                return `✅ الموقع آمن تماماً - درجة الثقة عالية جداً`;
+            } else if (risk === 'SUSPICIOUS') {
+                return `⚠️ الموقع يحتوي على بعض المؤشرات المريبة - توخ الحذر`;
+            } else {
+                return `🚨 الموقع خطير جداً - تجنب الدخول أو إدخال بيانات شخصية`;
+            }
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="error-message">${message}</div>`;
+            resultsDiv.classList.add('active');
+        }
+
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                scanURL();
+            }
+        });
+
+        // Focus على input عند التحميل
+        window.addEventListener('load', function() {
+            document.getElementById('urlInput').focus();
+        });
+    </script>
+</body>
+</html>

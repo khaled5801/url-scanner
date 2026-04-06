@@ -3,616 +3,383 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Scanner</title>
+    <title>CyberScan Sentinel – Advanced URL Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --primary-bg: #050505;
+            --accent-green: #10b981;
+            --dark-gray: #111827;
+            --border-dark: #1f2937;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --primary: #1a4d2e;
-            --accent: #52b788;
-            --accent-light: #74c69d;
-            --dark: #0f1419;
-            --darker: #0a0d11;
-            --text: #e8f5e9;
-            --text-secondary: #b0d5b8;
-            --border: #2d7a4a;
-            --warning: #d4a574;
-            --danger: #c1666b;
-        }
-
         body {
-            background: linear-gradient(135deg, var(--darker) 0%, #1a2f24 100%);
-            background-attachment: fixed;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            background-color: var(--primary-bg);
+            color: #e5e7eb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
 
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            background: rgba(15, 20, 25, 0.95);
-            border: 1px solid var(--border);
+        .glass-morphism {
+            background: rgba(17, 24, 39, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.1);
             border-radius: 12px;
-            padding: 50px;
-            box-shadow: 0 20px 60px rgba(45, 122, 74, 0.1);
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 50px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 30px;
+        .accent-border {
+            border: 1px solid var(--accent-green);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            font-weight: 700;
-            color: var(--accent-light);
-            margin-bottom: 10px;
+        .accent-glow {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
         }
 
-        .header p {
-            color: var(--text-secondary);
-            font-size: 0.95em;
-        }
-
-        .input-section {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 40px;
-            align-items: center;
-        }
-
-        .input-wrapper {
-            flex: 1;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 14px 18px;
-            background: rgba(45, 122, 74, 0.08);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: inherit;
-            font-size: 0.95em;
-            outline: none;
-            border-radius: 8px;
-        }
-
-        input[type="text"]:focus {
-            background: rgba(45, 122, 74, 0.12);
-            border-color: var(--accent-light);
-            box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.1);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        button {
-            padding: 14px 28px;
-            background: var(--primary);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 500;
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-green), #059669);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 12px;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .input-field {
+            background: rgba(31, 41, 55, 0.7);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #e5e7eb;
+            padding: 14px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+            background: rgba(31, 41, 55, 0.9);
+        }
+
+        .intelligence-report {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.6s ease, opacity 0.6s ease;
+        }
+
+        .intelligence-report.active {
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .threat-indicator {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .threat-critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid #dc2626;
+        }
+
+        .threat-high {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fed7aa;
+            border: 1px solid #ea580c;
+        }
+
+        .threat-medium {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fde047;
+            border: 1px solid #ca8a04;
+        }
+
+        .threat-low {
+            background: rgba(59, 130, 246, 0.2);
+            color: #bfdbfe;
+            border: 1px solid #2563eb;
+        }
+
+        .threat-clean {
+            background: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+            border: 1px solid #059669;
+        }
+
+        .stat-card {
+            background: rgba(31, 41, 55, 0.7);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            padding: 16px;
+            border-radius: 8px;
             transition: all 0.3s ease;
         }
 
-        button:hover {
-            background: var(--accent);
-            border-color: var(--accent-light);
+        .stat-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         }
 
-        .scan-btn {
-            flex: 1;
-        }
-
-        .preview-btn {
-            min-width: 120px;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 60px 0;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 2px solid var(--border);
-            border-top: 2px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            margin-top: 16px;
-            color: var(--accent);
-            font-size: 0.9em;
-        }
-
-        .results {
-            display: none;
-            margin-top: 40px;
-        }
-
-        .results.active {
-            display: block;
-        }
-
-        .result-item {
-            margin-bottom: 30px;
-            padding: 24px;
-            background: rgba(45, 122, 74, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
-
-        .result-title {
-            font-size: 1.1em;
-            color: var(--accent-light);
-            margin-bottom: 18px;
-            font-weight: 600;
-        }
-
-        .risk-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            margin: 12px 0;
-            font-size: 0.85em;
-        }
-
-        .risk-safe {
-            background: rgba(82, 183, 136, 0.15);
-            color: var(--accent-light);
-            border: 1px solid var(--accent);
-        }
-
-        .risk-suspicious {
-            background: rgba(212, 165, 116, 0.15);
-            color: var(--warning);
-            border: 1px solid var(--warning);
-        }
-
-        .risk-dangerous {
-            background: rgba(193, 102, 107, 0.15);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
-
-        .score-container {
-            margin: 20px 0;
-        }
-
-        .score-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-        }
-
-        .score-value {
-            color: var(--accent-light);
-            font-weight: 600;
-        }
-
-        .score-bar {
-            width: 100%;
-            height: 6px;
-            background: rgba(45, 122, 74, 0.2);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .score-fill {
-            height: 100%;
-            background: var(--accent);
-            transition: width 0.5s ease;
-        }
-
-        .score-fill.suspicious {
-            background: var(--warning);
-        }
-
-        .score-fill.dangerous {
-            background: var(--danger);
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 12px;
-            margin: 18px 0;
-        }
-
-        .stat-box {
-            background: rgba(45, 122, 74, 0.08);
-            padding: 16px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid var(--border);
-        }
-
-        .stat-number {
-            font-size: 1.8em;
+        .stat-value {
+            font-size: 24px;
             font-weight: 700;
-            color: var(--accent-light);
+            color: var(--accent-green);
             margin-bottom: 4px;
         }
 
         .stat-label {
-            font-size: 0.75em;
-            color: var(--text-secondary);
+            font-size: 12px;
+            color: #9ca3af;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .stat-box.malicious .stat-number {
-            color: var(--danger);
+        .loading-spinner {
+            border: 3px solid rgba(16, 185, 129, 0.1);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
 
-        .stat-box.suspicious .stat-number {
-            color: var(--warning);
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .threat-list {
-            list-style: none;
-        }
-
-        .threat-item {
-            padding: 10px 12px;
-            margin: 8px 0;
-            background: rgba(193, 102, 107, 0.08);
-            border-left: 2px solid var(--danger);
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #dc2626;
+            padding: 12px 16px;
             border-radius: 4px;
-            color: var(--text);
-            font-size: 0.9em;
+            color: #fca5a5;
+            font-size: 13px;
+            margin-bottom: 16px;
         }
 
-        .info-list {
-            list-style: none;
-        }
-
-        .info-item {
-            padding: 10px 12px;
-            margin: 8px 0;
-            background: rgba(82, 183, 136, 0.05);
-            border-left: 2px solid var(--accent);
+        .success-banner {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+            padding: 12px 16px;
             border-radius: 4px;
-            color: var(--text);
-            font-size: 0.9em;
+            color: #a7f3d0;
+            font-size: 13px;
+            margin-bottom: 16px;
         }
 
-        .redirect-chain {
-            background: rgba(212, 165, 116, 0.08);
-            padding: 16px;
-            border-radius: 6px;
-            border: 1px solid rgba(212, 165, 116, 0.2);
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-green);
+            margin-bottom: 12px;
+            margin-top: 24px;
         }
 
-        .redirect-url {
-            background: rgba(45, 122, 74, 0.12);
-            padding: 8px 12px;
-            margin: 8px 0;
+        .chain-item {
+            background: rgba(17, 24, 39, 0.5);
+            border-left: 2px solid var(--accent-green);
+            padding: 12px 16px;
+            margin-bottom: 8px;
             border-radius: 4px;
-            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .chain-item-hop {
+            color: var(--accent-green);
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .chain-item-url {
+            color: #d1d5db;
             word-break: break-all;
-            font-size: 0.85em;
-            border-left: 2px solid var(--warning);
+            margin: 4px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
         }
 
-        .redirect-arrow {
-            text-align: center;
-            color: var(--warning);
-            font-weight: 500;
-            margin: 6px 0;
-            font-size: 0.8em;
-        }
-
-        .screenshot-section {
-            margin-top: 16px;
-        }
-
-        .screenshot-img {
-            max-width: 100%;
-            border: 1px solid var(--border);
+        .screenshot-container {
+            position: relative;
+            width: 100%;
+            border: 1px solid rgba(16, 185, 129, 0.2);
             border-radius: 8px;
-            max-height: 400px;
-            margin-top: 12px;
+            overflow: hidden;
+            margin-top: 16px;
+            background: rgba(31, 41, 55, 0.5);
         }
 
-        .error-message {
-            padding: 16px;
-            background: rgba(193, 102, 107, 0.1);
-            border-left: 2px solid var(--danger);
-            border-radius: 6px;
-            color: var(--text);
-            margin: 16px 0;
+        .screenshot-image {
+            width: 100%;
+            display: block;
         }
 
-        .footer {
+        .screenshot-fallback {
+            padding: 24px;
             text-align: center;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-size: 0.85em;
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .finding-item {
+            background: rgba(31, 41, 55, 0.5);
+            border-left: 2px solid #f97316;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #d1d5db;
+            font-family: 'Courier New', monospace;
+        }
+
+        .no-findings {
+            color: #6b7280;
+            font-style: italic;
+            font-size: 12px;
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 30px;
+            .dashboard-container {
+                padding: 16px;
             }
 
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .input-section {
-                flex-direction: column;
-            }
-
-            .button-group {
-                width: 100%;
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
+            .stat-card {
+                min-width: auto;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Security Scanner</h1>
-            <p>Advanced URL Threat Analysis</p>
-        </div>
-
-        <div class="input-section">
-            <div class="input-wrapper">
-                <input 
-                    type="text" 
-                    id="urlInput" 
-                    placeholder="Enter URL (e.g., https://example.com)"
-                    autocomplete="off"
-                >
+    <div class="min-h-screen bg-gradient-to-b from-[#050505] to-[#0f172a] flex items-center justify-center py-8">
+        <div class="dashboard-container w-full max-w-4xl px-4">
+            <!-- Header -->
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold mb-2">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#10b981]">
+                        CyberScan Sentinel
+                    </span>
+                </h1>
+                <p class="text-[#9ca3af] text-sm tracking-wide">
+                    Advanced URL Intelligence & Automated Sandbox Analysis
+                </p>
             </div>
-            <div class="button-group">
-                <button class="scan-btn" onclick="scanURL()">Scan</button>
-                <button class="preview-btn" onclick="previewURL()">Preview</button>
+
+            <!-- Main Input Section -->
+            <div class="glass-morphism p-6 mb-8">
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#10b981] mb-2 tracking-wider">
+                            TARGET URL
+                        </label>
+                        <input
+                            type="text"
+                            id="urlInput"
+                            class="input-field"
+                            placeholder="https://example.com"
+                            autocomplete="off"
+                        >
+                    </div>
+                    <button class="btn-primary w-full" id="analyzeBtn" onclick="initiateAnalysis()">
+                        Initiate Threat Analysis
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <div class="loading" id="loading">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">Analyzing...</div>
-        </div>
+            <!-- Status Messages -->
+            <div id="statusContainer"></div>
 
-        <div class="results" id="results"></div>
+            <!-- Intelligence Report (Hidden by default) -->
+            <div id="intelligenceReport" class="intelligence-report">
+                <!-- Summary Section -->
+                <div class="glass-morphism p-6 mb-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-bold">Intelligence Report</h2>
+                        <span id="threatLevel" class="threat-indicator"></span>
+                    </div>
 
-        <div class="footer">
-            <p>Safe Analysis - No Direct Access</p>
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card">
+                            <div class="stat-value" id="hopCount">0</div>
+                            <div class="stat-label">Redirection Hops</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="vendorCount">0</div>
+                            <div class="stat-label">Vendors Checked</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="maliciousCount">0</div>
+                            <div class="stat-label">Malicious Detections</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="riskScore">0</div>
+                            <div class="stat-label">Static Risk Score</div>
+                        </div>
+                    </div>
+
+                    <!-- Analyzed URL -->
+                    <div class="bg-rgba(31, 41, 55, 0.5) border-l-2 border-[#10b981] p-4 rounded">
+                        <div class="text-xs font-semibold text-[#10b981] mb-2 tracking-wider">FINAL DESTINATION</div>
+                        <div id="finalUrl" class="text-sm text-[#d1d5db] font-mono break-all"></div>
+                    </div>
+                </div>
+
+                <!-- Redirection Chain -->
+                <div class="glass-morphism p-6 mb-8">
+                    <h3 class="section-title">Redirection Chain Analysis</h3>
+                    <div id="redirectionChain"></div>
+                </div>
+
+                <!-- VirusTotal Analysis -->
+                <div class="glass-morphism p-6 mb-8">
+                    <h3 class="section-title">Multi-Vendor Threat Intelligence</h3>
+                    <div id="virustotalAnalysis"></div>
+                </div>
+
+                <!-- Static Analysis -->
+                <div class="glass-morphism p-6 mb-8">
+                    <h3 class="section-title">Static Code Analysis</h3>
+                    <div id="staticAnalysis"></div>
+                </div>
+
+                <!-- Screenshot Preview -->
+                <div class="glass-morphism p-6 mb-8">
+                    <h3 class="section-title">Isolated Visual Preview</h3>
+                    <div id="screenshotContainer"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        const API_BASE = 'http://localhost:5000';
-
-        async function scanURL() {
-            const url = document.getElementById('urlInput').value.trim();
-            
-            if (!url) {
-                showError('Please enter a valid URL');
-                return;
-            }
-
-            const loading = document.getElementById('loading');
-            const results = document.getElementById('results');
-
-            loading.classList.add('active');
-            results.classList.remove('active');
-
-            try {
-                const response = await fetch(`${API_BASE}/analyze`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: url })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                displayResults(data);
-            } catch (error) {
-                showError(`Connection Error: ${error.message}`);
-                console.error('Error:', error);
-            } finally {
-                loading.classList.remove('active');
-            }
-        }
-
-        function previewURL() {
-            const url = document.getElementById('urlInput').value.trim();
-            
-            if (!url) {
-                showError('Please enter a valid URL');
-                return;
-            }
-
-            const fullURL = url.startsWith('http') ? url : 'https://' + url;
-            window.open(fullURL, '_blank');
-        }
-
-        function displayResults(data) {
-            const resultsDiv = document.getElementById('results');
-            let html = '';
-
-            const riskClass = data.overall_risk === 'SAFE' ? 'safe' : 
-                            data.overall_risk === 'SUSPICIOUS' ? 'suspicious' : 'dangerous';
-
-            html += `
-                <div class="result-item">
-                    <div class="result-title">Risk Assessment</div>
-                    <div class="risk-badge risk-${riskClass}">
-                        ${data.overall_risk}
-                    </div>
-                    <div class="score-container">
-                        <div class="score-label">
-                            <span>Risk Score</span>
-                            <span class="score-value">${data.risk_score}/100</span>
-                        </div>
-                        <div class="score-bar">
-                            <div class="score-fill ${riskClass}" style="width: ${data.risk_score}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            if (data.virustotal) {
-                html += `
-                    <div class="result-item">
-                        <div class="result-title">VirusTotal Analysis</div>
-                        <div class="stat-grid">
-                            <div class="stat-box malicious">
-                                <div class="stat-number">${data.virustotal.malicious}</div>
-                                <div class="stat-label">Malicious</div>
-                            </div>
-                            <div class="stat-box suspicious">
-                                <div class="stat-number">${data.virustotal.suspicious}</div>
-                                <div class="stat-label">Suspicious</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-number">${data.virustotal.harmless}</div>
-                                <div class="stat-label">Safe</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-number">${data.virustotal.undetected}</div>
-                                <div class="stat-label">Undetected</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (data.ssl_check) {
-                html += `
-                    <div class="result-item">
-                        <div class="result-title">SSL Certificate</div>
-                        <ul class="info-list">
-                            <li class="info-item">${data.ssl_check.message}</li>
-                            ${data.ssl_check.issuer ? `<li class="info-item">Issuer: ${data.ssl_check.issuer}</li>` : ''}
-                        </ul>
-                    </div>
-                `;
-            }
-
-            if (data.redirects && data.redirects.found) {
-                html += `
-                    <div class="result-item">
-                        <div class="result-title">Redirects</div>
-                        <div class="redirect-chain">
-                `;
-                
-                data.redirects.redirects.forEach((redirect) => {
-                    html += `
-                        <div class="redirect-url">${redirect.from}</div>
-                        <div class="redirect-arrow">→</div>
-                    `;
-                });
-                html += `
-                        <div class="redirect-url">${data.redirects.redirects[data.redirects.redirects.length - 1].to}</div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (data.malicious_patterns && data.malicious_patterns.found) {
-                html += `
-                    <div class="result-item">
-                        <div class="result-title">Detected Patterns</div>
-                        <ul class="threat-list">
-                `;
-                
-                data.malicious_patterns.patterns.forEach(pattern => {
-                    html += `<li class="threat-item">${pattern}</li>`;
-                });
-                
-                html += `</ul></div>`;
-            }
-
-            if (data.injection_check && data.injection_check.found) {
-                html += `
-                    <div class="result-item">
-                        <div class="result-title">Injection Threats</div>
-                        <ul class="threat-list">
-                `;
-                
-                data.injection_check.threats.forEach(threat => {
-                    html += `<li class="threat-item">${threat}</li>`;
-                });
-                
-                html += `</ul></div>`;
-            }
-
-            if (data.screenshot) {
-                html += `
-                    <div class="result-item screenshot-section">
-                        <div class="result-title">Website Preview</div>
-                        <img src="data:image/png;base64,${data.screenshot}" alt="Screenshot" class="screenshot-img">
-                    </div>
-                `;
-            }
-
-            resultsDiv.innerHTML = html;
-            resultsDiv.classList.add('active');
-        }
-
-        function showError(message) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `<div class="error-message">${message}</div>`;
-            resultsDiv.classList.add('active');
-        }
-
-        document.getElementById('urlInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                scanURL();
-            }
-        });
-
-        window.addEventListener('load', function() {
-            document.getElementById('urlInput').focus();
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

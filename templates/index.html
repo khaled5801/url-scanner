@@ -7,23 +7,23 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
-      --neon: #10b981;
-      --neon-dim: rgba(16, 185, 129, 0.15);
-      --neon-border: rgba(16, 185, 129, 0.35);
-      --glass-bg: rgba(10, 12, 14, 0.72);
-      --surface: rgba(16, 18, 22, 0.85);
+      --neon:        #10b981;
+      --neon-dim:    rgba(16,185,129,0.12);
+      --neon-border: rgba(16,185,129,0.28);
+      --glass:       rgba(8,10,13,0.78);
+      --surface:     rgba(13,16,20,0.90);
+      --surface-2:   rgba(6,8,10,0.60);
     }
 
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; }
 
     body {
-      background-color: #050505;
+      background: #050505;
       background-image:
-        radial-gradient(ellipse 60% 50% at 50% -10%, rgba(16, 185, 129, 0.06) 0%, transparent 70%),
-        linear-gradient(180deg, #050505 0%, #070a0d 100%);
+        radial-gradient(ellipse 55% 40% at 50% -5%, rgba(16,185,129,0.055) 0%, transparent 65%);
       min-height: 100vh;
       font-family: 'Courier New', Courier, monospace;
-      color: #cbd5e1;
+      color: #94a3b8;
     }
 
     /* Scanline overlay */
@@ -31,740 +31,704 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.04) 2px,
-        rgba(0,0,0,0.04) 4px
-      );
+      background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 4px);
       pointer-events: none;
       z-index: 999;
     }
 
-    .glass-card {
-      background: var(--glass-bg);
-      border: 1px solid var(--neon-border);
-      border-radius: 4px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+    /* ── Common surfaces ── */
+    .glass   { background: var(--glass);   border: 1px solid var(--neon-border); border-radius: 3px; backdrop-filter: blur(10px); }
+    .surface { background: var(--surface); border: 1px solid rgba(16,185,129,0.14); border-radius: 3px; }
+    .surface-2 { background: var(--surface-2); border: 1px solid rgba(255,255,255,0.05); border-radius: 2px; }
+
+    /* Glow on hover for result cards */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid rgba(16,185,129,0.14);
+      border-radius: 3px;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .result-card:hover {
+      border-color: rgba(16,185,129,0.38);
+      box-shadow: 0 0 18px rgba(16,185,129,0.06);
     }
 
-    .neon-text { color: var(--neon); }
-
-    .neon-border { border-color: var(--neon) !important; }
-
-    .neon-glow {
-      box-shadow: 0 0 0 1px var(--neon-border), 0 0 20px rgba(16, 185, 129, 0.08);
-    }
-
+    /* ── Input / Button ── */
     .input-field {
-      background: rgba(5, 5, 5, 0.9);
+      background: rgba(3,4,5,0.95);
       border: 1px solid var(--neon-border);
       border-radius: 2px;
       color: var(--neon);
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
+      font-family: inherit;
+      font-size: 13px;
       width: 100%;
-      padding: 12px 16px;
+      padding: 10px 14px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
       letter-spacing: 0.02em;
     }
-
-    .input-field::placeholder { color: rgba(16, 185, 129, 0.3); }
-
+    .input-field::placeholder { color: rgba(16,185,129,0.25); }
     .input-field:focus {
       border-color: var(--neon);
-      box-shadow: 0 0 0 1px var(--neon-border), inset 0 0 8px rgba(16,185,129,0.04);
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.18), inset 0 0 8px rgba(16,185,129,0.03);
     }
 
     .scan-btn {
       background: transparent;
       border: 1px solid var(--neon);
       color: var(--neon);
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      letter-spacing: 0.12em;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      padding: 12px 32px;
+      padding: 10px 26px;
       cursor: pointer;
-      transition: background 0.2s, box-shadow 0.2s;
       border-radius: 2px;
       white-space: nowrap;
+      transition: background 0.2s, box-shadow 0.2s;
     }
-
     .scan-btn:hover:not(:disabled) {
       background: var(--neon-dim);
-      box-shadow: 0 0 20px rgba(16,185,129,0.15);
+      box-shadow: 0 0 16px rgba(16,185,129,0.12);
     }
+    .scan-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    .scan-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    /* Progressive disclosure — report fades in */
-    #report-section {
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 0.5s ease, transform 0.5s ease;
-      pointer-events: none;
-    }
-    #report-section.visible {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: all;
-    }
-
-    /* Module cards */
-    .module-card {
-      background: var(--surface);
-      border: 1px solid rgba(16, 185, 129, 0.18);
-      border-radius: 4px;
-      padding: 20px 24px;
-    }
-
-    .module-label {
-      font-size: 10px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: rgba(16, 185, 129, 0.55);
-      margin-bottom: 14px;
-      border-bottom: 1px solid rgba(16, 185, 129, 0.12);
-      padding-bottom: 8px;
-    }
-
-    /* Severity badges */
+    /* ── Badges ── */
     .badge {
       display: inline-block;
-      font-size: 10px;
-      letter-spacing: 0.1em;
+      font-size: 9px;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      padding: 2px 8px;
+      padding: 2px 7px;
       border-radius: 2px;
-      font-weight: 600;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+    .b-crit { background: rgba(239,68,68,0.14); color: #ef4444; border: 1px solid rgba(239,68,68,0.28); }
+    .b-high { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid rgba(249,115,22,0.28); }
+    .b-med  { background: rgba(234,179,8,0.12);  color: #eab308; border: 1px solid rgba(234,179,8,0.28); }
+    .b-low  { background: rgba(16,185,129,0.1);  color: #10b981; border: 1px solid rgba(16,185,129,0.28); }
+    .b-info { background: rgba(100,116,139,0.14); color: #64748b; border: 1px solid rgba(100,116,139,0.22); }
+    .b-pres { background: rgba(16,185,129,0.08); color: #10b981; border: 1px solid rgba(16,185,129,0.22); }
+    .b-abs  { background: rgba(239,68,68,0.09);  color: #f87171; border: 1px solid rgba(239,68,68,0.22); }
+    .b-disc { background: rgba(234,179,8,0.09);  color: #ca8a04; border: 1px solid rgba(234,179,8,0.22); }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(16,185,129,0.45);
+      border-bottom: 1px solid rgba(16,185,129,0.1);
+      padding-bottom: 7px;
+      margin-bottom: 12px;
     }
 
-    .badge-critical { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
-    .badge-high     { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
-    .badge-medium   { background: rgba(234,179,8,0.12);  color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
-    .badge-low      { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
-    .badge-info     { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
-    .badge-present  { background: rgba(16,185,129,0.1);  color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
-    .badge-absent   { background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
-
-    /* Score ring */
-    .score-ring-container { position: relative; width: 96px; height: 96px; }
-    .score-ring-container svg { transform: rotate(-90deg); }
-    .score-label {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    /* ── Score ring ── */
+    .ring-wrap { position:relative; width:88px; height:88px; flex-shrink:0; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-center {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
     }
 
-    /* Redirect hop line */
-    .hop-connector {
-      width: 1px;
-      background: linear-gradient(to bottom, var(--neon-border), transparent);
-      height: 16px;
-      margin: 0 auto;
+    /* ── Progressive disclosure ── */
+    #report { opacity:0; transform:translateY(10px); transition:opacity 0.45s ease,transform 0.45s ease; pointer-events:none; }
+    #report.visible { opacity:1; transform:translateY(0); pointer-events:all; }
+
+    /* ── Loading bar ── */
+    .pulse-bar { height:1px; background:linear-gradient(90deg,transparent,var(--neon),transparent); background-size:200% 100%; animation:sweep 1.5s linear infinite; }
+    @keyframes sweep { 0%{background-position:-100% 0} 100%{background-position:200% 0} }
+
+    /* ── Blinking cursor ── */
+    .cursor::after { content:'_'; animation:blink 1s step-end infinite; color:var(--neon); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Hop chain ── */
+    .hop-row { background: var(--surface-2); border: 1px solid rgba(16,185,129,0.1); border-radius:2px; padding:7px 11px; font-size:11px; }
+    .hop-connector { width:1px; height:10px; background:linear-gradient(to bottom,rgba(16,185,129,0.25),transparent); margin:0 auto; }
+
+    /* ── Header finding rows ── */
+    .hdr-row { border-bottom:1px solid rgba(255,255,255,0.04); }
+    .hdr-row:last-child { border-bottom:none; }
+
+    /* ── Expandable detail ── */
+    .expand-btn {
+      background:none; border:none; cursor:pointer;
+      color:rgba(16,185,129,0.45); font-size:10px; font-family:inherit;
+      letter-spacing:0.1em; padding:0;
+      transition:color 0.15s;
+    }
+    .expand-btn:hover { color:var(--neon); }
+    .detail-panel {
+      overflow:hidden;
+      max-height:0;
+      transition:max-height 0.3s ease;
+    }
+    .detail-panel.open { max-height:120px; }
+
+    /* ── Context note pill ── */
+    .ctx-note {
+      background: rgba(16,185,129,0.06);
+      border: 1px solid rgba(16,185,129,0.14);
+      border-radius:2px;
+      font-size:10px;
+      color: rgba(16,185,129,0.65);
+      padding:4px 8px;
+      margin-top:4px;
+      line-height:1.5;
     }
 
-    .hop-row {
-      border: 1px solid rgba(16,185,129,0.12);
-      border-radius: 2px;
-      padding: 8px 12px;
-      font-size: 12px;
-      background: rgba(5,5,5,0.5);
-    }
+    /* ── VT stat boxes ── */
+    .vt-stat { border-radius:2px; padding:8px; text-align:center; flex:1; }
 
-    /* Loading pulse bar */
-    .pulse-bar {
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--neon), transparent);
-      background-size: 200% 100%;
-      animation: sweep 1.6s linear infinite;
-    }
-    @keyframes sweep {
-      0%   { background-position: -100% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    /* Blinking cursor */
-    .cursor::after {
-      content: '_';
-      animation: blink 1s step-end infinite;
-      color: var(--neon);
-    }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-    /* Header tag */
-    .header-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 6px 0;
-      border-bottom: 1px solid rgba(16,185,129,0.06);
-      font-size: 12px;
-      gap: 8px;
-    }
-    .header-row:last-child { border-bottom: none; }
-
-    /* Screenshot frame */
+    /* ── Preview frame ── */
     .preview-frame {
-      border: 1px solid var(--neon-border);
-      border-radius: 4px;
-      overflow: hidden;
-      background: #000;
-      aspect-ratio: 16/9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border:1px solid var(--neon-border); border-radius:3px;
+      overflow:hidden; background:#000;
+      aspect-ratio:16/9;
+      display:flex; align-items:center; justify-content:center;
+      transition: border-color 0.25s;
+    }
+    .preview-frame:hover { border-color: rgba(16,185,129,0.5); }
+
+    /* ── Safe-mode placeholder ── */
+    .safe-mode-placeholder {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:8px; padding:24px; text-align:center;
+    }
+    .safe-mode-icon { width:32px; height:32px; stroke:rgba(16,185,129,0.35); fill:none; }
+
+    /* ── Score breakdown grid ── */
+    .breakdown-item { display:flex; justify-content:space-between; font-size:10px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .breakdown-item:last-child { border-bottom:none; }
+
+    /* ── Trusted-domain notice ── */
+    .trusted-notice {
+      background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2);
+      border-radius:2px; padding:6px 12px; font-size:10px; color:rgba(16,185,129,0.7);
+      letter-spacing:0.05em;
     }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #050505; }
-    ::-webkit-scrollbar-thumb { background: var(--neon-border); border-radius: 2px; }
-
-    .font-mono { font-family: 'Courier New', Courier, monospace; }
-
-    /* VT engine list */
-    .engine-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      padding: 4px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-    }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-track { background:#050505; }
+    ::-webkit-scrollbar-thumb { background:var(--neon-border); border-radius:2px; }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-  <!-- ── Top Nav Bar ── -->
-  <nav style="border-bottom: 1px solid rgba(16,185,129,0.15); background: rgba(5,5,5,0.95);" class="sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <!-- Logo mark: overlapping squares -->
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <rect x="1" y="1" width="13" height="13" stroke="#10b981" stroke-width="1.2"/>
-          <rect x="8" y="8" width="13" height="13" stroke="#10b981" stroke-width="1.2" fill="rgba(16,185,129,0.06)"/>
+  <!-- ══ Nav ══════════════════════════════════════════════════════════════ -->
+  <nav style="border-bottom:1px solid rgba(16,185,129,0.13);background:rgba(4,5,6,0.97);" class="sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-5 py-2.5 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="1" y="1" width="11" height="11" stroke="#10b981" stroke-width="1.1"/>
+          <rect x="8" y="8" width="11" height="11" stroke="#10b981" stroke-width="1.1" fill="rgba(16,185,129,0.05)"/>
         </svg>
-        <span class="neon-text font-mono text-sm tracking-widest uppercase">CyberScan Sentinel</span>
+        <span style="color:var(--neon);" class="text-xs tracking-widest uppercase">CyberScan Sentinel</span>
+        <span class="text-xs text-slate-600 tracking-wider">v2.2</span>
       </div>
-      <div class="flex items-center gap-4">
-        <span id="api-status" class="font-mono text-xs tracking-wider text-slate-500">— CHECKING SYSTEMS —</span>
-        <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;" id="status-dot"></span>
+      <div class="flex items-center gap-3">
+        <span id="api-status" class="text-xs text-slate-600 tracking-wider">— CHECKING SYSTEMS —</span>
+        <span id="status-dot" style="width:5px;height:5px;border-radius:50%;background:#10b981;box-shadow:0 0 5px #10b981;display:inline-block;"></span>
       </div>
     </div>
   </nav>
 
-  <!-- ── Main ── -->
-  <main class="max-w-4xl mx-auto px-6 py-16">
+  <!-- ══ Main ═════════════════════════════════════════════════════════════ -->
+  <main class="max-w-5xl mx-auto px-5 py-10">
 
     <!-- Hero -->
-    <div class="text-center mb-12">
-      <p class="font-mono text-xs tracking-widest neon-text mb-4 uppercase">Threat Intelligence Platform v2.1</p>
-      <h1 class="font-mono text-3xl text-slate-100 mb-3 tracking-tight">
-        URL Security Analysis &amp; <span class="neon-text">Sandbox</span>
+    <div class="text-center mb-8">
+      <p style="color:var(--neon);" class="text-xs tracking-widest uppercase mb-2">Threat Intelligence Platform</p>
+      <h1 class="text-2xl text-slate-100 mb-2 tracking-tight">
+        URL Security Analysis &amp; <span style="color:var(--neon);">Sandbox</span>
       </h1>
-      <p class="font-mono text-xs text-slate-500 max-w-lg mx-auto leading-relaxed tracking-wide">
-        Submit a suspicious endpoint for multi-vector heuristic analysis, payload detection, and automated
-        sandbox rendering. Zero direct browser contact with the target.
+      <p class="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+        Multi-vector heuristic analysis with VirusTotal V3 engine, recursive redirect chain mapping,
+        static payload detection, and safe-view sandboxing. Zero direct browser contact.
       </p>
     </div>
 
-    <!-- Scan Input Panel -->
-    <div class="glass-card neon-glow p-6 mb-4">
-      <p class="font-mono text-xs tracking-widest text-slate-500 mb-3 uppercase">Target Vector</p>
-      <div class="flex gap-3 items-stretch">
-        <input
-          id="url-input"
-          type="text"
-          class="input-field flex-1"
+    <!-- ── Scan Input ── -->
+    <div class="glass p-5 mb-3">
+      <p class="section-label">Target Vector</p>
+      <div class="flex gap-2 items-stretch">
+        <input id="url-input" type="text" class="input-field flex-1"
           placeholder="https://target-endpoint.tld/payload/path"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <button id="scan-btn" class="scan-btn" onclick="initiateScan()">
-          Initiate Scan
-        </button>
+          autocomplete="off" spellcheck="false" />
+        <button id="scan-btn" class="scan-btn" onclick="initiateScan()">Initiate Scan</button>
       </div>
-      <div class="mt-3 flex gap-6">
-        <span class="font-mono text-xs text-slate-600">&#x25BA; VirusTotal V3 Engine</span>
-        <span class="font-mono text-xs text-slate-600">&#x25BA; Redirect Chain Mapping</span>
-        <span class="font-mono text-xs text-slate-600">&#x25BA; Static Payload Analysis</span>
-        <span class="font-mono text-xs text-slate-600">&#x25BA; Safe-View Sandbox</span>
+      <div class="flex flex-wrap gap-x-5 gap-y-1 mt-2.5">
+        <span class="text-xs text-slate-700">&#x25BA; VirusTotal V3</span>
+        <span class="text-xs text-slate-700">&#x25BA; Redirect Chain (5 hops)</span>
+        <span class="text-xs text-slate-700">&#x25BA; Static Payload Analysis</span>
+        <span class="text-xs text-slate-700">&#x25BA; Header Audit</span>
+        <span class="text-xs text-slate-700">&#x25BA; Safe-View Sandbox</span>
       </div>
     </div>
 
-    <!-- Loading bar (hidden by default) -->
+    <!-- Loading -->
     <div id="loading-bar" class="hidden mb-2">
       <div class="pulse-bar"></div>
-      <p id="loading-label" class="font-mono text-xs text-slate-600 mt-2 tracking-widest cursor">Initializing analysis modules</p>
+      <p id="loading-label" class="text-xs text-slate-600 mt-1.5 tracking-widest cursor">Initializing analysis</p>
     </div>
 
-    <!-- Error Banner -->
-    <div id="error-banner" class="hidden glass-card p-4 mb-6" style="border-color:rgba(239,68,68,0.35);">
-      <p class="font-mono text-xs text-red-400 tracking-wide" id="error-text"></p>
+    <!-- Error -->
+    <div id="error-banner" class="hidden p-3 mb-4" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.28);border-radius:2px;">
+      <p class="text-xs text-red-400 tracking-wide" id="error-text"></p>
     </div>
 
-    <!-- ══════════════════════════════════════
-         REPORT SECTION — Progressive disclosure
-         ══════════════════════════════════════ -->
-    <div id="report-section">
+    <!-- ════════════════════════════════════════════════════════════════════
+         REPORT — Progressive Disclosure
+         ════════════════════════════════════════════════════════════════════ -->
+    <div id="report">
 
-      <!-- ① Composite Risk Score -->
-      <div class="module-card mb-4" id="risk-card">
-        <p class="module-label">Composite Threat Assessment</p>
-        <div class="flex items-center gap-8">
-          <!-- SVG ring -->
-          <div class="score-ring-container flex-shrink-0">
-            <svg width="96" height="96" viewBox="0 0 96 96">
-              <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(16,185,129,0.1)" stroke-width="6"/>
-              <circle id="score-ring-fill" cx="48" cy="48" r="40" fill="none" stroke="#10b981"
-                stroke-width="6" stroke-linecap="round"
-                stroke-dasharray="251.3" stroke-dashoffset="251.3"
-                style="transition:stroke-dashoffset 1s ease, stroke 0.5s ease;"/>
+      <!-- Trusted domain notice (shown conditionally) -->
+      <div id="trusted-notice" class="trusted-notice hidden mb-3">
+        &#x25B6; Trusted-domain whitelist active — static analysis weight reduced and composite score capped at 20. VirusTotal verdict remains authoritative.
+      </div>
+
+      <!-- ① Composite Risk -->
+      <div class="result-card p-5 mb-3">
+        <p class="section-label">Composite Threat Assessment</p>
+        <div class="flex items-start gap-6">
+          <!-- Ring -->
+          <div class="ring-wrap">
+            <svg width="88" height="88" viewBox="0 0 88 88">
+              <circle cx="44" cy="44" r="36" fill="none" stroke="rgba(16,185,129,0.09)" stroke-width="5"/>
+              <circle id="ring-fill" cx="44" cy="44" r="36" fill="none" stroke="#10b981"
+                stroke-width="5" stroke-linecap="round"
+                stroke-dasharray="226.2" stroke-dashoffset="226.2"
+                style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease;"/>
             </svg>
-            <div class="score-label">
-              <span id="score-value" class="neon-text font-mono text-2xl font-bold">—</span>
-              <span class="font-mono text-xs text-slate-500 tracking-wider">/100</span>
+            <div class="ring-center">
+              <span id="score-val" style="color:var(--neon);" class="text-xl font-bold">—</span>
+              <span class="text-slate-600" style="font-size:9px;">/100</span>
             </div>
           </div>
-          <!-- Text summary -->
-          <div class="flex-1">
-            <div class="flex items-center gap-3 mb-2">
-              <span id="severity-badge" class="badge badge-info">PENDING</span>
-              <span id="severity-label" class="font-mono text-sm text-slate-300">—</span>
+          <!-- Text -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span id="sev-badge" class="badge b-info">PENDING</span>
+              <span id="sev-label" class="text-sm text-slate-300">—</span>
             </div>
-            <p id="recommendation-text" class="font-mono text-xs text-slate-500 leading-relaxed tracking-wide">—</p>
-            <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1">
-              <p class="font-mono text-xs text-slate-600">Target: <span id="summary-target" class="text-slate-400">—</span></p>
-              <p class="font-mono text-xs text-slate-600">Resolved: <span id="summary-final" class="text-slate-400">—</span></p>
-              <p class="font-mono text-xs text-slate-600">Scan time: <span id="summary-ts" class="text-slate-400">—</span></p>
+            <p id="rec-text" class="text-xs text-slate-500 leading-relaxed mb-3">—</p>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-3">
+              <p class="text-xs text-slate-600">Target: <span id="s-target" class="text-slate-400">—</span></p>
+              <p class="text-xs text-slate-600">Resolved: <span id="s-final" class="text-slate-400">—</span></p>
+              <p class="text-xs text-slate-600">Timestamp: <span id="s-ts" class="text-slate-400">—</span></p>
+            </div>
+            <!-- Score breakdown -->
+            <div class="surface-2 p-3" style="max-width:320px;">
+              <p class="text-xs text-slate-600 mb-1.5 tracking-wider uppercase" style="font-size:9px;">Score Breakdown</p>
+              <div class="breakdown-item"><span class="text-slate-500">VirusTotal (70 pts max)</span><span id="bd-vt" style="color:var(--neon);">—</span></div>
+              <div class="breakdown-item"><span class="text-slate-500">Header Audit (10 pts max)</span><span id="bd-hd" style="color:var(--neon);">—</span></div>
+              <div class="breakdown-item"><span class="text-slate-500">HTML Analysis (15 pts max)</span><span id="bd-html" style="color:var(--neon);">—</span></div>
+              <div class="breakdown-item"><span class="text-slate-500">Redirect Chain (5 pts max)</span><span id="bd-rd" style="color:var(--neon);">—</span></div>
+              <div class="breakdown-item text-slate-600" id="bd-caps-row" style="display:none;">
+                <span id="bd-caps" class="text-yellow-600"></span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Grid: VT + Redirect -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 
-        <!-- ② VirusTotal Intelligence -->
-        <div class="module-card">
-          <p class="module-label">VirusTotal Threat Intelligence</p>
-          <div id="vt-content">
-            <div class="flex justify-between items-center mb-4">
+        <!-- ② VirusTotal -->
+        <div class="result-card p-5">
+          <p class="section-label">VirusTotal Threat Intelligence</p>
+          <div id="vt-body">
+            <div class="flex justify-between items-start mb-3">
               <div>
-                <p class="font-mono text-xs text-slate-500 mb-1">Verdict</p>
-                <span id="vt-verdict" class="badge badge-info">—</span>
+                <p class="text-xs text-slate-600 mb-1">Verdict</p>
+                <span id="vt-verdict" class="badge b-info">—</span>
               </div>
               <div class="text-right">
-                <p class="font-mono text-xs text-slate-500 mb-1">Detections</p>
-                <p class="font-mono text-xl neon-text"><span id="vt-malicious">—</span><span class="text-slate-600 text-sm"> / <span id="vt-total">—</span></span></p>
+                <p class="text-xs text-slate-600 mb-1">Engine Detections</p>
+                <p class="text-lg" style="color:var(--neon);"><span id="vt-mal">—</span><span class="text-slate-700 text-xs"> / <span id="vt-total">—</span></span></p>
               </div>
             </div>
-            <div class="flex gap-2 mb-4">
-              <div style="flex:1; background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:2px;padding:8px;text-align:center;">
-                <p class="font-mono text-xs text-red-400">Malicious</p>
-                <p class="font-mono text-lg text-red-400" id="vt-mal-num">—</p>
+            <div class="flex gap-2 mb-3">
+              <div class="vt-stat" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.18);">
+                <p class="text-xs text-red-400">Malicious</p>
+                <p class="text-base text-red-400" id="vt-m">—</p>
               </div>
-              <div style="flex:1; background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:2px;padding:8px;text-align:center;">
-                <p class="font-mono text-xs text-orange-400">Suspicious</p>
-                <p class="font-mono text-lg text-orange-400" id="vt-sus-num">—</p>
+              <div class="vt-stat" style="background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.18);">
+                <p class="text-xs text-orange-400">Suspicious</p>
+                <p class="text-base text-orange-400" id="vt-s">—</p>
               </div>
-              <div style="flex:1; background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:2px;padding:8px;text-align:center;">
-                <p class="font-mono text-xs neon-text">Harmless</p>
-                <p class="font-mono text-lg neon-text" id="vt-har-num">—</p>
+              <div class="vt-stat" style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.16);">
+                <p class="text-xs" style="color:var(--neon);">Harmless</p>
+                <p class="text-base" style="color:var(--neon);" id="vt-h">—</p>
               </div>
             </div>
-            <div id="vt-engines-list"></div>
-            <div id="vt-error" class="hidden font-mono text-xs text-slate-500 mt-2"></div>
+            <div id="vt-engines"></div>
+            <p id="vt-err" class="text-xs text-slate-600 mt-2 hidden"></p>
           </div>
         </div>
 
         <!-- ③ Redirect Chain -->
-        <div class="module-card">
-          <p class="module-label">Redirect Chain Analysis</p>
-          <div class="flex justify-between mb-3">
-            <span class="font-mono text-xs text-slate-500">Total Hops: <span id="hop-count" class="text-slate-300">—</span></span>
-            <span id="cross-domain-badge" class="badge badge-info hidden">Cross-Domain</span>
+        <div class="result-card p-5">
+          <p class="section-label">Redirect Chain Analysis</p>
+          <div class="flex items-center gap-4 mb-3">
+            <span class="text-xs text-slate-600">Hops: <span id="hop-count" class="text-slate-300">—</span></span>
+            <span id="cross-badge" class="badge b-high hidden">Cross-Domain</span>
+            <span id="trusted-hop-badge" class="badge b-low hidden">Trusted Origin</span>
           </div>
-          <div id="hop-chain" class="max-h-64 overflow-y-auto pr-1"></div>
+          <div id="hop-chain" class="max-h-56 overflow-y-auto pr-0.5 space-y-0"></div>
         </div>
 
       </div>
 
       <!-- ④ HTTP Header Audit -->
-      <div class="module-card mb-4">
-        <p class="module-label">HTTP Security Header Audit</p>
-        <div class="flex items-center gap-6 mb-4">
-          <div>
-            <p class="font-mono text-xs text-slate-500 mb-1">Header Risk Level</p>
-            <span id="header-risk" class="badge badge-info">—</span>
-          </div>
-          <div>
-            <p class="font-mono text-xs text-slate-500 mb-1">Missing Headers</p>
-            <p class="font-mono text-xl" id="header-missing">—</p>
-          </div>
-          <div>
-            <p class="font-mono text-xs text-slate-500 mb-1">Server Disclosure</p>
-            <p class="font-mono text-sm text-slate-300" id="header-server">—</p>
-          </div>
-          <div>
-            <p class="font-mono text-xs text-slate-500 mb-1">HTTPS Enforced</p>
-            <p class="font-mono text-sm" id="header-https">—</p>
-          </div>
+      <div class="result-card p-5 mb-3">
+        <p class="section-label">HTTP Security Header Audit</p>
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
+          <div><p class="text-xs text-slate-600 mb-1">Risk Level</p><span id="hdr-risk" class="badge b-info">—</span></div>
+          <div><p class="text-xs text-slate-600 mb-1">Missing</p><p class="text-lg" id="hdr-missing">—</p></div>
+          <div><p class="text-xs text-slate-600 mb-1">Server</p><p class="text-xs text-slate-400" id="hdr-server">—</p></div>
+          <div><p class="text-xs text-slate-600 mb-1">HTTPS</p><p class="text-xs" id="hdr-https">—</p></div>
         </div>
-        <div id="header-findings" class="space-y-0"></div>
+        <div id="hdr-findings"></div>
       </div>
 
       <!-- ⑤ HTML Payload Analysis -->
-      <div class="module-card mb-4">
-        <p class="module-label">Static HTML Payload Analysis</p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
-            <p class="font-mono text-xs text-slate-500 mb-1">Threat Score</p>
-            <p class="font-mono text-xl neon-text" id="html-score">—</p>
-          </div>
-          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
-            <p class="font-mono text-xs text-slate-500 mb-1">Detections</p>
-            <p class="font-mono text-xl text-slate-300" id="html-det">—</p>
-          </div>
-          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
-            <p class="font-mono text-xs text-slate-500 mb-1">IFrames Found</p>
-            <p class="font-mono text-xl text-slate-300" id="html-iframes">—</p>
-          </div>
-          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
-            <p class="font-mono text-xs text-slate-500 mb-1">Payload Size</p>
-            <p class="font-mono text-xl text-slate-300" id="html-size">—</p>
-          </div>
+      <div class="result-card p-5 mb-3">
+        <p class="section-label">Static HTML Payload Analysis</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          <div class="surface-2 p-3"><p class="text-xs text-slate-600 mb-1">Threat Score</p><p class="text-lg" id="html-score" style="color:var(--neon);">—</p></div>
+          <div class="surface-2 p-3"><p class="text-xs text-slate-600 mb-1">Detections</p><p class="text-lg text-slate-300" id="html-det">—</p></div>
+          <div class="surface-2 p-3"><p class="text-xs text-slate-600 mb-1">IFrames</p><p class="text-lg text-slate-300" id="html-iframes">—</p></div>
+          <div class="surface-2 p-3"><p class="text-xs text-slate-600 mb-1">Payload Size</p><p class="text-lg text-slate-300" id="html-size">—</p></div>
         </div>
-        <div id="html-detections"></div>
+        <div id="html-flags" class="flex flex-wrap gap-2 mb-3"></div>
+        <div id="html-dets"></div>
       </div>
 
       <!-- ⑥ Safe-View Sandbox -->
-      <div class="module-card">
-        <p class="module-label">Safe-View Sandbox Preview</p>
-        <p class="font-mono text-xs text-slate-600 mb-3 tracking-wide">
-          Rendered via isolated third-party screenshot API. No direct browser contact with target.
-        </p>
-        <div id="preview-container" class="preview-frame">
-          <p class="font-mono text-xs text-slate-600">Preview not available.</p>
+      <div class="result-card p-5">
+        <p class="section-label">Safe-View Sandbox Preview</p>
+        <p class="text-xs text-slate-700 mb-3">Rendered via isolated third-party screenshot API. Zero direct browser contact.</p>
+        <div id="preview-frame" class="preview-frame">
+          <div class="safe-mode-placeholder">
+            <svg class="safe-mode-icon" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="2"/><line x1="12" y1="4" x2="12" y2="28"/><line x1="4" y1="12" x2="28" y2="12"/></svg>
+            <p class="text-xs text-slate-600">Preview pending scan.</p>
+          </div>
         </div>
-        <div id="preview-error" class="hidden font-mono text-xs text-slate-600 mt-2"></div>
+        <p id="preview-note" class="text-xs text-slate-700 mt-2 hidden"></p>
       </div>
 
-    </div><!-- /report-section -->
-
+    </div><!-- /report -->
   </main>
 
-  <!-- ── Footer ── -->
-  <footer style="border-top:1px solid rgba(16,185,129,0.1);" class="mt-16 py-6">
-    <div class="max-w-4xl mx-auto px-6 flex justify-between items-center">
-      <p class="font-mono text-xs text-slate-700 tracking-widest uppercase">CyberScan Sentinel</p>
-      <p class="font-mono text-xs text-slate-700">For authorized security analysis only.</p>
+  <!-- ══ Footer ════════════════════════════════════════════════════════════ -->
+  <footer style="border-top:1px solid rgba(16,185,129,0.09);" class="mt-12 py-4">
+    <div class="max-w-5xl mx-auto px-5 flex justify-between">
+      <p class="text-xs text-slate-700 tracking-wider uppercase">CyberScan Sentinel v2.2</p>
+      <p class="text-xs text-slate-700">For authorized security analysis only.</p>
     </div>
   </footer>
 
   <script>
-    /* ─────────────────────────────────────────
-       Utility helpers
-    ───────────────────────────────────────── */
+    /* ─── Helpers ─────────────────────────────────────────────────────── */
     const $ = id => document.getElementById(id);
-    const esc = s => String(s)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const trunc = (s, n=52) => (!s ? '—' : s.length > n ? s.slice(0,n)+'…' : s);
+    const fmtBytes = b => !b ? '—' : b < 1024 ? b+' B' : b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
 
-    function severityClass(s) {
-      const map = {
-        CRITICAL:'badge-critical', HIGH:'badge-high',
-        MEDIUM:'badge-medium', LOW:'badge-low',
-        INFO:'badge-info', PRESENT:'badge-present',
-        ABSENT:'badge-absent', DISCLOSURE:'badge-medium',
-        ERROR:'badge-high', CLEAN:'badge-low',
-        MALICIOUS:'badge-critical', SUSPICIOUS:'badge-high',
+    function badgeClass(s) {
+      const m = {
+        CRITICAL:'b-crit',HIGH:'b-high',MEDIUM:'b-med',LOW:'b-low',INFO:'b-info',
+        PRESENT:'b-pres',ABSENT:'b-abs',DISCLOSURE:'b-disc',INSECURE:'b-high',
+        ERROR:'b-high',CLEAN:'b-low',MALICIOUS:'b-crit',SUSPICIOUS:'b-high',
+        'SAFE_MODE':'b-med',UNCONFIGURED:'b-info',LIVE:'b-low',
       };
-      return map[s?.toUpperCase()] || 'badge-info';
+      return m[(s||'').toUpperCase()] || 'b-info';
     }
-
-    function scoreColor(score) {
-      if (score >= 70) return '#ef4444';
-      if (score >= 45) return '#f97316';
-      if (score >= 20) return '#eab308';
+    function scoreColor(n) {
+      if (n >= 70) return '#ef4444';
+      if (n >= 45) return '#f97316';
+      if (n >= 20) return '#eab308';
       return '#10b981';
     }
 
-    function truncate(str, len = 48) {
-      if (!str) return '—';
-      return str.length > len ? str.slice(0, len) + '…' : str;
-    }
-
-    function formatBytes(b) {
-      if (!b) return '—';
-      if (b < 1024) return b + ' B';
-      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-      return (b/1048576).toFixed(2) + ' MB';
-    }
-
-    /* ─────────────────────────────────────────
-       Health check on load
-    ───────────────────────────────────────── */
-    async function checkHealth() {
+    /* ─── Health check ────────────────────────────────────────────────── */
+    (async () => {
       try {
-        const r = await fetch('/api/health');
-        const d = await r.json();
+        const d = await (await fetch('/api/health')).json();
         const parts = [];
         if (d.virustotal_configured) parts.push('VT');
         if (d.screenshot_configured) parts.push('SS');
         $('api-status').textContent = parts.length
           ? `SYSTEMS NOMINAL [${parts.join(' | ')}]`
           : 'DEGRADED — API KEYS NOT SET';
-        $('status-dot').style.background = parts.length ? '#10b981' : '#eab308';
-        $('status-dot').style.boxShadow   = parts.length
-          ? '0 0 6px #10b981' : '0 0 6px #eab308';
-      } catch {
-        $('api-status').textContent = 'SYSTEM STATUS UNKNOWN';
-      }
-    }
-    checkHealth();
+        if (!parts.length) {
+          $('status-dot').style.background = '#eab308';
+          $('status-dot').style.boxShadow  = '0 0 5px #eab308';
+        }
+      } catch { $('api-status').textContent = 'STATUS UNKNOWN'; }
+    })();
 
-    /* ─────────────────────────────────────────
-       Enter key trigger
-    ───────────────────────────────────────── */
-    $('url-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') initiateScan();
-    });
+    $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') initiateScan(); });
 
-    /* ─────────────────────────────────────────
-       Scan orchestration
-    ───────────────────────────────────────── */
-    const loadingMessages = [
+    /* ─── Loading messages ────────────────────────────────────────────── */
+    const MSGS = [
       'Initializing analysis modules',
       'Tracing redirect chain',
       'Auditing HTTP response headers',
       'Running static payload analysis',
       'Querying VirusTotal V3 engine',
       'Generating safe-view sandbox preview',
-      'Aggregating threat intelligence report',
+      'Aggregating threat intelligence',
     ];
+    let _lt = null, _mi = 0;
+    const startLoading = () => { _mi = 0; $('loading-label').textContent = MSGS[0]; _lt = setInterval(() => { _mi = (_mi+1)%MSGS.length; $('loading-label').textContent = MSGS[_mi]; }, 2000); };
+    const stopLoading  = () => { clearInterval(_lt); };
 
-    let loadingTimer = null;
-    let msgIndex = 0;
-
-    function startLoadingMessages() {
-      msgIndex = 0;
-      $('loading-label').textContent = loadingMessages[0];
-      loadingTimer = setInterval(() => {
-        msgIndex = (msgIndex + 1) % loadingMessages.length;
-        $('loading-label').textContent = loadingMessages[msgIndex];
-      }, 2200);
-    }
-
-    function stopLoadingMessages() {
-      if (loadingTimer) clearInterval(loadingTimer);
-    }
-
+    /* ─── Scan ────────────────────────────────────────────────────────── */
     async function initiateScan() {
       const url = $('url-input').value.trim();
       if (!url) return;
-
-      // Reset UI state
       $('scan-btn').disabled = true;
       $('error-banner').classList.add('hidden');
-      $('report-section').classList.remove('visible');
+      $('report').classList.remove('visible');
       $('loading-bar').classList.remove('hidden');
-      startLoadingMessages();
+      startLoading();
 
       try {
         const resp = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({url}),
         });
-
         const data = await resp.json();
-
-        if (!resp.ok) {
-          showError(data.error || 'Scan request failed. Verify target URL and retry.');
-          return;
-        }
-
-        renderReport(data);
-
-      } catch (err) {
-        showError('Network failure — unable to reach the CyberScan Sentinel API.');
-      } finally {
-        stopLoadingMessages();
-        $('loading-bar').classList.add('hidden');
-        $('scan-btn').disabled = false;
-      }
+        if (!resp.ok) { showErr(data.error || 'Scan failed.'); return; }
+        render(data);
+      } catch { showErr('Network failure — cannot reach CyberScan Sentinel API.'); }
+      finally { stopLoading(); $('loading-bar').classList.add('hidden'); $('scan-btn').disabled = false; }
     }
 
-    function showError(msg) {
+    function showErr(msg) {
       $('error-text').textContent = msg;
       $('error-banner').classList.remove('hidden');
     }
 
-    /* ─────────────────────────────────────────
-       Report rendering
-    ───────────────────────────────────────── */
-    function renderReport(d) {
-      const risk = d.risk || {};
-      const vt   = d.virustotal || {};
-      const rc   = d.redirect_chain || {};
-      const ha   = d.header_audit || {};
-      const html = d.html_analysis || {};
-      const ss   = d.safe_preview || {};
+    /* ─── Render ──────────────────────────────────────────────────────── */
+    function render(d) {
+      const risk   = d.risk   || {};
+      const vt     = d.virustotal || {};
+      const rc     = d.redirect_chain || {};
+      const ha     = d.header_audit  || {};
+      const html   = d.html_analysis || {};
+      const ss     = d.safe_preview  || {};
+      const bd     = risk.score_breakdown || {};
 
-      /* ① Composite Risk */
+      /* Trusted notice */
+      if (d.trusted_domain) { $('trusted-notice').classList.remove('hidden'); }
+      else { $('trusted-notice').classList.add('hidden'); }
+
+      /* ① Composite risk */
       const score = risk.composite_score ?? 0;
-      $('score-value').textContent = score;
-      const circumference = 251.3;
-      const offset = circumference - (score / 100) * circumference;
-      $('score-ring-fill').style.strokeDashoffset = offset;
-      $('score-ring-fill').style.stroke = scoreColor(score);
+      $('score-val').textContent = score;
+      $('score-val').style.color = scoreColor(score);
+      const circ = 226.2;
+      $('ring-fill').style.strokeDashoffset = circ - (score/100)*circ;
+      $('ring-fill').style.stroke = scoreColor(score);
 
       const sev = risk.severity || 'UNKNOWN';
-      $('severity-badge').className = `badge ${severityClass(sev)}`;
-      $('severity-badge').textContent = sev;
-      $('severity-label').textContent = {
-        CRITICAL:'Critical Threat Detected',
-        HIGH:'High-Risk Indicators Present',
-        MEDIUM:'Moderate Risk — Caution Advised',
-        LOW:'No Significant Threat Indicators',
+      $('sev-badge').className = `badge ${badgeClass(sev)}`;
+      $('sev-badge').textContent = sev;
+      $('sev-label').textContent = {
+        CRITICAL:'Critical Threat Detected',HIGH:'High-Risk Indicators Present',
+        MEDIUM:'Elevated Risk — Caution Advised',LOW:'No Significant Indicators',
       }[sev] || sev;
-      $('recommendation-text').textContent = risk.recommendation || '—';
-      $('summary-target').textContent = truncate(d.target_url, 52);
-      $('summary-final').textContent  = truncate(d.final_url, 52);
-      $('summary-ts').textContent     = d.scan_timestamp || '—';
+      $('rec-text').textContent = risk.recommendation || '—';
+      $('s-target').textContent = trunc(d.target_url);
+      $('s-final').textContent  = trunc(d.final_url);
+      $('s-ts').textContent     = d.scan_timestamp || '—';
 
-      /* ② VirusTotal */
+      /* Score breakdown */
+      $('bd-vt').textContent   = bd.virustotal_pts  ?? '—';
+      $('bd-hd').textContent   = bd.header_pts      ?? '—';
+      $('bd-html').textContent = bd.html_pts        ?? '—';
+      $('bd-rd').textContent   = bd.redirect_pts    ?? '—';
+      const caps = [];
+      if (bd.vt_clean_cap_applied)       caps.push('VT-clean cap (max 15)');
+      if (bd.trusted_domain_cap_applied) caps.push('Trusted-domain cap (max 20)');
+      if (caps.length) {
+        $('bd-caps').textContent = 'Caps applied: ' + caps.join(', ');
+        $('bd-caps-row').style.display = 'flex';
+      }
+
+      /* ② VT */
       if (vt.error && !vt.available) {
-        $('vt-error').textContent = vt.error;
-        $('vt-error').classList.remove('hidden');
+        $('vt-err').textContent = vt.error;
+        $('vt-err').classList.remove('hidden');
       } else if (vt.error) {
-        $('vt-error').textContent = 'VirusTotal: ' + vt.error;
-        $('vt-error').classList.remove('hidden');
+        $('vt-err').textContent = 'VirusTotal: ' + vt.error;
+        $('vt-err').classList.remove('hidden');
       } else {
         const verdict = vt.verdict || 'UNKNOWN';
-        $('vt-verdict').className = `badge ${severityClass(verdict)}`;
+        $('vt-verdict').className = `badge ${badgeClass(verdict)}`;
         $('vt-verdict').textContent = verdict;
-        $('vt-malicious').textContent = vt.malicious ?? '—';
-        $('vt-total').textContent     = vt.total_engines ?? '—';
-        $('vt-mal-num').textContent   = vt.malicious ?? '—';
-        $('vt-sus-num').textContent   = vt.suspicious ?? '—';
-        $('vt-har-num').textContent   = vt.harmless ?? '—';
+        $('vt-mal').textContent = vt.malicious  ?? '—';
+        $('vt-total').textContent = vt.total_engines ?? '—';
+        $('vt-m').textContent = vt.malicious  ?? '—';
+        $('vt-s').textContent = vt.suspicious ?? '—';
+        $('vt-h').textContent = vt.harmless   ?? '—';
 
         const engines = vt.flagged_engines || [];
-        if (engines.length > 0) {
-          let html_str = '<p class="font-mono text-xs text-slate-600 mb-2 tracking-wider uppercase">Flagging Engines</p>';
+        if (engines.length) {
+          let h = '<p class="text-xs text-slate-700 mb-1.5 tracking-wider" style="font-size:9px;text-transform:uppercase;">Flagging Engines</p>';
           engines.forEach(e => {
-            html_str += `<div class="engine-row">
+            h += `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
               <span class="text-slate-400">${esc(e.engine)}</span>
-              <span class="${severityClass(e.category)} badge" style="font-size:9px;">${esc(e.result || e.category)}</span>
+              <span class="badge ${badgeClass(e.category)}" style="font-size:8px;">${esc(e.result||e.category)}</span>
             </div>`;
           });
-          $('vt-engines-list').innerHTML = html_str;
+          $('vt-engines').innerHTML = h;
+        } else if (vt.available && !vt.error) {
+          $('vt-engines').innerHTML = '<p class="text-xs" style="color:var(--neon);">No engines flagged this URL.</p>';
         }
       }
 
-      /* ③ Redirect Chain */
+      /* ③ Redirect chain */
       $('hop-count').textContent = rc.hop_count ?? '—';
-      const crossDomain = rc.cross_domain_redirect;
-      if (crossDomain) {
-        $('cross-domain-badge').classList.remove('hidden');
-        $('cross-domain-badge').className = 'badge badge-high';
-      }
+      if (rc.cross_domain_redirect) $('cross-badge').classList.remove('hidden');
+      if (d.trusted_domain)         $('trusted-hop-badge').classList.remove('hidden');
 
       const chain = rc.chain || [];
       let chainHtml = '';
-      chain.forEach((hop, i) => {
-        const code = hop.status_code;
-        let codeColor = 'text-slate-400';
-        if (code >= 300 && code < 400) codeColor = 'text-yellow-400';
-        if (code >= 400) codeColor = 'text-red-400';
-        if (code >= 200 && code < 300) codeColor = 'text-green-400';
+      chain.forEach((h, i) => {
+        const code = h.status_code;
+        let cc = 'text-slate-500';
+        if (code >= 300 && code < 400) cc = 'text-yellow-500';
+        else if (code >= 200 && code < 300) cc = 'text-green-500';
+        else if (code >= 400) cc = 'text-red-400';
+
+        const crossTag = h.cross_domain && h.hop > 1
+          ? `<span class="badge b-high" style="font-size:8px;margin-left:4px;">cross-domain</span>` : '';
+        const latency  = h.latency_ms != null ? `<span class="text-slate-600">${h.latency_ms} ms</span>` : '';
+        const server   = h.server ? `<span class="text-slate-600 ml-3">${esc(h.server)}</span>` : '';
 
         chainHtml += `<div class="hop-row">
           <div class="flex justify-between items-center">
-            <span class="font-mono text-xs text-slate-500">HOP ${hop.hop}</span>
-            ${code ? `<span class="font-mono text-xs ${codeColor}">${code}</span>` : ''}
+            <span class="text-slate-600">HOP ${h.hop}${crossTag}</span>
+            <div class="flex items-center gap-2">
+              ${latency}${server}
+              ${code ? `<span class="${cc}">${code}</span>` : ''}
+            </div>
           </div>
-          <p class="font-mono text-xs text-slate-300 mt-1 break-all">${esc(hop.url)}</p>
-          ${hop.error ? `<p class="font-mono text-xs text-red-400 mt-1">${esc(hop.error)}</p>` : ''}
+          <p class="text-slate-300 mt-0.5 break-all" style="font-size:10px;">${esc(h.url)}</p>
+          ${h.error ? `<p class="text-red-400 mt-0.5" style="font-size:10px;">${esc(h.error)}</p>` : ''}
         </div>`;
-        if (i < chain.length - 1) {
-          chainHtml += `<div class="hop-connector"></div>`;
-        }
+        if (i < chain.length-1) chainHtml += '<div class="hop-connector"></div>';
       });
-      $('hop-chain').innerHTML = chainHtml || '<p class="font-mono text-xs text-slate-600">No redirect data available.</p>';
+      $('hop-chain').innerHTML = chainHtml || '<p class="text-xs text-slate-600">No chain data.</p>';
 
-      /* ④ Header Audit */
-      const riskMap = { HIGH:'badge-high', MEDIUM:'badge-medium', LOW:'badge-low' };
-      $('header-risk').className   = `badge ${riskMap[ha.risk_level] || 'badge-info'}`;
-      $('header-risk').textContent = ha.risk_level || '—';
-      $('header-missing').textContent  = ha.missing_headers ?? '—';
-      $('header-missing').className    = `font-mono text-xl ${ha.missing_headers > 3 ? 'text-red-400' : ha.missing_headers > 1 ? 'text-yellow-400' : 'neon-text'}`;
-      $('header-server').textContent   = ha.server || 'Not Disclosed';
-      $('header-https').textContent    = ha.https_enforced ? 'Yes' : 'No';
-      $('header-https').className      = `font-mono text-sm ${ha.https_enforced ? 'neon-text' : 'text-red-400'}`;
+      /* ④ Headers */
+      const riskMap = {HIGH:'b-high',MEDIUM:'b-med',LOW:'b-low'};
+      $('hdr-risk').className = `badge ${riskMap[ha.risk_level]||'b-info'}`;
+      $('hdr-risk').textContent = ha.risk_level || '—';
+      $('hdr-missing').textContent = ha.missing_headers ?? '—';
+      $('hdr-missing').style.color = ha.missing_headers > 3 ? '#ef4444' : ha.missing_headers > 1 ? '#eab308' : 'var(--neon)';
+      $('hdr-server').textContent  = ha.server || 'Not Disclosed';
+      $('hdr-https').textContent   = ha.https_enforced ? 'Enforced' : 'Not Enforced';
+      $('hdr-https').style.color   = ha.https_enforced ? 'var(--neon)' : '#ef4444';
 
       const findings = ha.findings || [];
-      let findHtml = '';
-      findings.forEach(f => {
-        findHtml += `<div class="header-row">
-          <span class="font-mono text-xs text-slate-400" style="min-width:220px;">${esc(f.header)}</span>
-          <span class="badge ${severityClass(f.status)}" style="font-size:9px;">${esc(f.status)}</span>
-          <span class="font-mono text-xs text-slate-500 text-right flex-1 ml-4">${esc(truncate(f.description, 72))}</span>
+      let fh = '';
+      findings.forEach((f, idx) => {
+        const detailId = `hdr-detail-${idx}`;
+        fh += `<div class="hdr-row py-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-slate-400" style="font-size:11px;min-width:210px;">${esc(f.header)}</span>
+            <span class="badge ${badgeClass(f.status)}" style="font-size:8px;">${esc(f.status)}</span>
+            ${f.current_value ? `<span class="text-slate-600 text-xs truncate max-w-xs">${esc(f.current_value.slice(0,60))}${f.current_value.length>60?'…':''}</span>` : ''}
+            ${(f.status === 'ABSENT' || f.status === 'DISCLOSURE' || f.status === 'INSECURE')
+              ? `<button class="expand-btn ml-auto" onclick="toggleDetail('${detailId}',this)">+ WHY IT MATTERS</button>` : ''}
+          </div>
+          <div class="detail-panel" id="${detailId}">
+            <div class="surface-2 mt-2 p-2.5 space-y-1.5">
+              <p class="text-xs text-slate-500">${esc(f.why_it_matters||'')}</p>
+              ${f.recommended_value ? `<p class="text-xs text-slate-600">Recommended: <span style="color:var(--neon);">${esc(f.recommended_value)}</span></p>` : ''}
+            </div>
+          </div>
         </div>`;
       });
-      $('header-findings').innerHTML = findHtml;
+      $('hdr-findings').innerHTML = fh;
 
-      /* ⑤ HTML Analysis */
-      $('html-score').textContent   = html.threat_score ?? '—';
-      $('html-score').className     = `font-mono text-xl ${(html.threat_score||0) > 50 ? 'text-red-400' : (html.threat_score||0) > 20 ? 'text-yellow-400' : 'neon-text'}`;
-      $('html-det').textContent     = html.detection_count ?? '—';
-      $('html-iframes').textContent = `${html.iframe_count ?? '—'} (${html.hidden_iframe_count ?? 0} hidden)`;
-      $('html-size').textContent    = formatBytes(html.raw_size_bytes);
+      /* ⑤ HTML analysis */
+      const hs = html.threat_score ?? 0;
+      $('html-score').textContent = hs;
+      $('html-score').style.color = hs > 50 ? '#ef4444' : hs > 20 ? '#eab308' : 'var(--neon)';
+      $('html-det').textContent = html.detection_count ?? '—';
+      $('html-iframes').textContent = `${html.iframe_count??'—'} (${html.hidden_iframe_count??0} hidden)`;
+      $('html-size').textContent = fmtBytes(html.raw_size_bytes);
+
+      /* Context flags */
+      let flagHtml = '';
+      if (html.minified_source)  flagHtml += `<span class="badge b-info" style="font-size:8px;">Minified Bundle Detected</span>`;
+      if (html.trusted_domain)   flagHtml += `<span class="badge b-low"  style="font-size:8px;">Trusted Domain — Weight Reduced</span>`;
+      if (html.auto_download)    flagHtml += `<span class="badge b-high" style="font-size:8px;">Auto-Download Vector</span>`;
+      $('html-flags').innerHTML = flagHtml;
 
       const dets = html.detections || [];
-      if (dets.length === 0) {
-        $('html-detections').innerHTML = '<p class="font-mono text-xs neon-text">No payload indicators detected.</p>';
+      if (!dets.length) {
+        $('html-dets').innerHTML = '<p class="text-xs" style="color:var(--neon);">No payload indicators detected.</p>';
       } else {
-        let detHtml = '';
+        let dh = '';
         dets.forEach(det => {
-          detHtml += `<div class="flex items-start gap-3 py-2" style="border-bottom:1px solid rgba(16,185,129,0.06);">
-            <span class="badge ${severityClass(det.severity)} flex-shrink-0" style="font-size:9px;margin-top:1px;">${esc(det.severity)}</span>
-            <div>
-              <p class="font-mono text-xs text-slate-300">${esc(det.label)}</p>
-              <p class="font-mono text-xs text-slate-600">${esc(det.type)} — ${det.occurrences} occurrence(s)</p>
+          dh += `<div class="py-2 flex items-start gap-2.5" style="border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span class="badge ${badgeClass(det.severity)} flex-shrink-0 mt-0.5" style="font-size:8px;">${esc(det.severity)}</span>
+            <div class="min-w-0">
+              <p class="text-slate-300" style="font-size:11px;">${esc(det.label)}</p>
+              <p class="text-slate-600 text-xs">${esc(det.type)} — ${det.occurrences} occurrence(s)</p>
+              ${det.context_note ? `<div class="ctx-note">${esc(det.context_note)}</div>` : ''}
             </div>
           </div>`;
         });
-        $('html-detections').innerHTML = detHtml;
+        $('html-dets').innerHTML = dh;
       }
 
-      /* ⑥ Safe Preview */
+      /* ⑥ Screenshot */
       if (ss.screenshot_url) {
-        $('preview-container').innerHTML = `<img src="${esc(ss.screenshot_url)}" alt="Sandbox preview" style="width:100%;height:100%;object-fit:cover;" />`;
+        $('preview-frame').innerHTML = `<img src="${esc(ss.screenshot_url)}" alt="Sandbox preview" style="width:100%;height:100%;object-fit:cover;" />`;
       } else {
-        const errMsg = ss.error || (ss.available === false
-          ? 'SCREENSHOT_API_KEY not configured — set environment variable to enable safe preview.'
-          : 'Preview unavailable for this target.');
-        $('preview-container').innerHTML = `<p class="font-mono text-xs text-slate-600 text-center px-8">${esc(errMsg)}</p>`;
+        /* Graceful SAFE_MODE placeholder */
+        const modeLabel = ss.mode || 'SAFE_MODE';
+        const errMsg    = ss.error || 'Preview unavailable for this target.';
+        $('preview-frame').innerHTML = `
+          <div class="safe-mode-placeholder">
+            <svg class="safe-mode-icon" viewBox="0 0 32 32">
+              <path d="M16 3L4 8v8c0 7.4 5.1 14.3 12 16 6.9-1.7 12-8.6 12-16V8L16 3z" stroke-width="1.2"/>
+              <line x1="12" y1="16" x2="20" y2="16" stroke-width="1.5"/>
+              <line x1="16" y1="12" x2="16" y2="20" stroke-width="1.5" class="absent-line" style="display:none;"/>
+            </svg>
+            <p class="text-xs text-slate-600">Safe Mode — Preview Unavailable</p>
+            <span class="badge ${badgeClass(modeLabel)}" style="font-size:8px;">${esc(modeLabel)}</span>
+          </div>`;
+        if (errMsg) {
+          $('preview-note').textContent = errMsg;
+          $('preview-note').classList.remove('hidden');
+        }
       }
 
-      /* Reveal the report */
+      /* Reveal */
       requestAnimationFrame(() => {
-        $('report-section').classList.add('visible');
-        $('report-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        $('report').classList.add('visible');
+        $('report').scrollIntoView({behavior:'smooth',block:'start'});
       });
+    }
+
+    /* ─── Expandable header detail ──────────────────────────────────── */
+    function toggleDetail(id, btn) {
+      const panel = document.getElementById(id);
+      const open  = panel.classList.toggle('open');
+      btn.textContent = open ? '− COLLAPSE' : '+ WHY IT MATTERS';
     }
   </script>
 </body>

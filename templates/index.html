@@ -1,385 +1,771 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberScan Sentinel – Advanced URL Intelligence</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --primary-bg: #050505;
-            --accent-green: #10b981;
-            --dark-gray: #111827;
-            --border-dark: #1f2937;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberScan Sentinel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --neon: #10b981;
+      --neon-dim: rgba(16, 185, 129, 0.15);
+      --neon-border: rgba(16, 185, 129, 0.35);
+      --glass-bg: rgba(10, 12, 14, 0.72);
+      --surface: rgba(16, 18, 22, 0.85);
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    * { box-sizing: border-box; }
 
-        body {
-            background-color: var(--primary-bg);
-            color: #e5e7eb;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
-        }
+    body {
+      background-color: #050505;
+      background-image:
+        radial-gradient(ellipse 60% 50% at 50% -10%, rgba(16, 185, 129, 0.06) 0%, transparent 70%),
+        linear-gradient(180deg, #050505 0%, #070a0d 100%);
+      min-height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+      color: #cbd5e1;
+    }
 
-        .glass-morphism {
-            background: rgba(17, 24, 39, 0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(16, 185, 129, 0.1);
-            border-radius: 12px;
-        }
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
 
-        .accent-border {
-            border: 1px solid var(--accent-green);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
-        }
+    .glass-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--neon-border);
+      border-radius: 4px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
 
-        .accent-glow {
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
-        }
+    .neon-text { color: var(--neon); }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-green), #059669);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 10px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 12px;
-        }
+    .neon-border { border-color: var(--neon) !important; }
 
-        .btn-primary:hover {
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
-            transform: translateY(-2px);
-        }
+    .neon-glow {
+      box-shadow: 0 0 0 1px var(--neon-border), 0 0 20px rgba(16, 185, 129, 0.08);
+    }
 
-        .btn-primary:active {
-            transform: translateY(0);
-        }
+    .input-field {
+      background: rgba(5, 5, 5, 0.9);
+      border: 1px solid var(--neon-border);
+      border-radius: 2px;
+      color: var(--neon);
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      width: 100%;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.02em;
+    }
 
-        .input-field {
-            background: rgba(31, 41, 55, 0.7);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #e5e7eb;
-            padding: 14px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
+    .input-field::placeholder { color: rgba(16, 185, 129, 0.3); }
 
-        .input-field:focus {
-            outline: none;
-            border-color: var(--accent-green);
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-            background: rgba(31, 41, 55, 0.9);
-        }
+    .input-field:focus {
+      border-color: var(--neon);
+      box-shadow: 0 0 0 1px var(--neon-border), inset 0 0 8px rgba(16,185,129,0.04);
+    }
 
-        .intelligence-report {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            transition: max-height 0.6s ease, opacity 0.6s ease;
-        }
+    .scan-btn {
+      background: transparent;
+      border: 1px solid var(--neon);
+      color: var(--neon);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 12px 32px;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
 
-        .intelligence-report.active {
-            max-height: 2000px;
-            opacity: 1;
-        }
+    .scan-btn:hover:not(:disabled) {
+      background: var(--neon-dim);
+      box-shadow: 0 0 20px rgba(16,185,129,0.15);
+    }
 
-        .threat-indicator {
-            display: inline-block;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
+    .scan-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
-        .threat-critical {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            border: 1px solid #dc2626;
-        }
+    /* Progressive disclosure — report fades in */
+    #report-section {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      pointer-events: none;
+    }
+    #report-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
 
-        .threat-high {
-            background: rgba(249, 115, 22, 0.2);
-            color: #fed7aa;
-            border: 1px solid #ea580c;
-        }
+    /* Module cards */
+    .module-card {
+      background: var(--surface);
+      border: 1px solid rgba(16, 185, 129, 0.18);
+      border-radius: 4px;
+      padding: 20px 24px;
+    }
 
-        .threat-medium {
-            background: rgba(234, 179, 8, 0.2);
-            color: #fde047;
-            border: 1px solid #ca8a04;
-        }
+    .module-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(16, 185, 129, 0.55);
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(16, 185, 129, 0.12);
+      padding-bottom: 8px;
+    }
 
-        .threat-low {
-            background: rgba(59, 130, 246, 0.2);
-            color: #bfdbfe;
-            border: 1px solid #2563eb;
-        }
+    /* Severity badges */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-weight: 600;
+    }
 
-        .threat-clean {
-            background: rgba(16, 185, 129, 0.2);
-            color: #a7f3d0;
-            border: 1px solid #059669;
-        }
+    .badge-critical { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-high     { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid rgba(249,115,22,0.3); }
+    .badge-medium   { background: rgba(234,179,8,0.12);  color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+    .badge-low      { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+    .badge-info     { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+    .badge-present  { background: rgba(16,185,129,0.1);  color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+    .badge-absent   { background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
 
-        .stat-card {
-            background: rgba(31, 41, 55, 0.7);
-            border: 1px solid rgba(16, 185, 129, 0.1);
-            padding: 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
+    /* Score ring */
+    .score-ring-container { position: relative; width: 96px; height: 96px; }
+    .score-ring-container svg { transform: rotate(-90deg); }
+    .score-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
 
-        .stat-card:hover {
-            border-color: rgba(16, 185, 129, 0.3);
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
-        }
+    /* Redirect hop line */
+    .hop-connector {
+      width: 1px;
+      background: linear-gradient(to bottom, var(--neon-border), transparent);
+      height: 16px;
+      margin: 0 auto;
+    }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent-green);
-            margin-bottom: 4px;
-        }
+    .hop-row {
+      border: 1px solid rgba(16,185,129,0.12);
+      border-radius: 2px;
+      padding: 8px 12px;
+      font-size: 12px;
+      background: rgba(5,5,5,0.5);
+    }
 
-        .stat-label {
-            font-size: 12px;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+    /* Loading pulse bar */
+    .pulse-bar {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon), transparent);
+      background-size: 200% 100%;
+      animation: sweep 1.6s linear infinite;
+    }
+    @keyframes sweep {
+      0%   { background-position: -100% 0; }
+      100% { background-position: 200% 0; }
+    }
 
-        .loading-spinner {
-            border: 3px solid rgba(16, 185, 129, 0.1);
-            border-top-color: var(--accent-green);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
+    /* Blinking cursor */
+    .cursor::after {
+      content: '_';
+      animation: blink 1s step-end infinite;
+      color: var(--neon);
+    }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+    /* Header tag */
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(16,185,129,0.06);
+      font-size: 12px;
+      gap: 8px;
+    }
+    .header-row:last-child { border-bottom: none; }
 
-        .error-banner {
-            background: rgba(239, 68, 68, 0.1);
-            border-left: 3px solid #dc2626;
-            padding: 12px 16px;
-            border-radius: 4px;
-            color: #fca5a5;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
+    /* Screenshot frame */
+    .preview-frame {
+      border: 1px solid var(--neon-border);
+      border-radius: 4px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        .success-banner {
-            background: rgba(16, 185, 129, 0.1);
-            border-left: 3px solid #10b981;
-            padding: 12px 16px;
-            border-radius: 4px;
-            color: #a7f3d0;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #050505; }
+    ::-webkit-scrollbar-thumb { background: var(--neon-border); border-radius: 2px; }
 
-        .section-title {
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent-green);
-            margin-bottom: 12px;
-            margin-top: 24px;
-        }
+    .font-mono { font-family: 'Courier New', Courier, monospace; }
 
-        .chain-item {
-            background: rgba(17, 24, 39, 0.5);
-            border-left: 2px solid var(--accent-green);
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .chain-item-hop {
-            color: var(--accent-green);
-            font-weight: 600;
-            margin-right: 8px;
-        }
-
-        .chain-item-url {
-            color: #d1d5db;
-            word-break: break-all;
-            margin: 4px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-        }
-
-        .screenshot-container {
-            position: relative;
-            width: 100%;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 16px;
-            background: rgba(31, 41, 55, 0.5);
-        }
-
-        .screenshot-image {
-            width: 100%;
-            display: block;
-        }
-
-        .screenshot-fallback {
-            padding: 24px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .finding-item {
-            background: rgba(31, 41, 55, 0.5);
-            border-left: 2px solid #f97316;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            color: #d1d5db;
-            font-family: 'Courier New', monospace;
-        }
-
-        .no-findings {
-            color: #6b7280;
-            font-style: italic;
-            font-size: 12px;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 16px;
-            }
-
-            .stat-card {
-                min-width: auto;
-            }
-        }
-    </style>
+    /* VT engine list */
+    .engine-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+  </style>
 </head>
-<body>
-    <div class="min-h-screen bg-gradient-to-b from-[#050505] to-[#0f172a] flex items-center justify-center py-8">
-        <div class="dashboard-container w-full max-w-4xl px-4">
-            <!-- Header -->
-            <div class="mb-8 text-center">
-                <h1 class="text-3xl font-bold mb-2">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#10b981]">
-                        CyberScan Sentinel
-                    </span>
-                </h1>
-                <p class="text-[#9ca3af] text-sm tracking-wide">
-                    Advanced URL Intelligence & Automated Sandbox Analysis
-                </p>
-            </div>
+<body class="min-h-screen">
 
-            <!-- Main Input Section -->
-            <div class="glass-morphism p-6 mb-8">
-                <div class="flex flex-col gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-[#10b981] mb-2 tracking-wider">
-                            TARGET URL
-                        </label>
-                        <input
-                            type="text"
-                            id="urlInput"
-                            class="input-field"
-                            placeholder="https://example.com"
-                            autocomplete="off"
-                        >
-                    </div>
-                    <button class="btn-primary w-full" id="analyzeBtn" onclick="initiateAnalysis()">
-                        Initiate Threat Analysis
-                    </button>
-                </div>
-            </div>
+  <!-- ── Top Nav Bar ── -->
+  <nav style="border-bottom: 1px solid rgba(16,185,129,0.15); background: rgba(5,5,5,0.95);" class="sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Logo mark: overlapping squares -->
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="1" y="1" width="13" height="13" stroke="#10b981" stroke-width="1.2"/>
+          <rect x="8" y="8" width="13" height="13" stroke="#10b981" stroke-width="1.2" fill="rgba(16,185,129,0.06)"/>
+        </svg>
+        <span class="neon-text font-mono text-sm tracking-widest uppercase">CyberScan Sentinel</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="api-status" class="font-mono text-xs tracking-wider text-slate-500">— CHECKING SYSTEMS —</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#10b981;box-shadow:0 0 6px #10b981;" id="status-dot"></span>
+      </div>
+    </div>
+  </nav>
 
-            <!-- Status Messages -->
-            <div id="statusContainer"></div>
+  <!-- ── Main ── -->
+  <main class="max-w-4xl mx-auto px-6 py-16">
 
-            <!-- Intelligence Report (Hidden by default) -->
-            <div id="intelligenceReport" class="intelligence-report">
-                <!-- Summary Section -->
-                <div class="glass-morphism p-6 mb-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-lg font-bold">Intelligence Report</h2>
-                        <span id="threatLevel" class="threat-indicator"></span>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="stat-card">
-                            <div class="stat-value" id="hopCount">0</div>
-                            <div class="stat-label">Redirection Hops</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="vendorCount">0</div>
-                            <div class="stat-label">Vendors Checked</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="maliciousCount">0</div>
-                            <div class="stat-label">Malicious Detections</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="riskScore">0</div>
-                            <div class="stat-label">Static Risk Score</div>
-                        </div>
-                    </div>
-
-                    <!-- Analyzed URL -->
-                    <div class="bg-rgba(31, 41, 55, 0.5) border-l-2 border-[#10b981] p-4 rounded">
-                        <div class="text-xs font-semibold text-[#10b981] mb-2 tracking-wider">FINAL DESTINATION</div>
-                        <div id="finalUrl" class="text-sm text-[#d1d5db] font-mono break-all"></div>
-                    </div>
-                </div>
-
-                <!-- Redirection Chain -->
-                <div class="glass-morphism p-6 mb-8">
-                    <h3 class="section-title">Redirection Chain Analysis</h3>
-                    <div id="redirectionChain"></div>
-                </div>
-
-                <!-- VirusTotal Analysis -->
-                <div class="glass-morphism p-6 mb-8">
-                    <h3 class="section-title">Multi-Vendor Threat Intelligence</h3>
-                    <div id="virustotalAnalysis"></div>
-                </div>
-
-                <!-- Static Analysis -->
-                <div class="glass-morphism p-6 mb-8">
-                    <h3 class="section-title">Static Code Analysis</h3>
-                    <div id="staticAnalysis"></div>
-                </div>
-
-                <!-- Screenshot Preview -->
-                <div class="glass-morphism p-6 mb-8">
-                    <h3 class="section-title">Isolated Visual Preview</h3>
-                    <div id="screenshotContainer"></div>
-                </div>
-            </div>
-        </div>
+    <!-- Hero -->
+    <div class="text-center mb-12">
+      <p class="font-mono text-xs tracking-widest neon-text mb-4 uppercase">Threat Intelligence Platform v2.1</p>
+      <h1 class="font-mono text-3xl text-slate-100 mb-3 tracking-tight">
+        URL Security Analysis &amp; <span class="neon-text">Sandbox</span>
+      </h1>
+      <p class="font-mono text-xs text-slate-500 max-w-lg mx-auto leading-relaxed tracking-wide">
+        Submit a suspicious endpoint for multi-vector heuristic analysis, payload detection, and automated
+        sandbox rendering. Zero direct browser contact with the target.
+      </p>
     </div>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <!-- Scan Input Panel -->
+    <div class="glass-card neon-glow p-6 mb-4">
+      <p class="font-mono text-xs tracking-widest text-slate-500 mb-3 uppercase">Target Vector</p>
+      <div class="flex gap-3 items-stretch">
+        <input
+          id="url-input"
+          type="text"
+          class="input-field flex-1"
+          placeholder="https://target-endpoint.tld/payload/path"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="scan-btn" class="scan-btn" onclick="initiateScan()">
+          Initiate Scan
+        </button>
+      </div>
+      <div class="mt-3 flex gap-6">
+        <span class="font-mono text-xs text-slate-600">&#x25BA; VirusTotal V3 Engine</span>
+        <span class="font-mono text-xs text-slate-600">&#x25BA; Redirect Chain Mapping</span>
+        <span class="font-mono text-xs text-slate-600">&#x25BA; Static Payload Analysis</span>
+        <span class="font-mono text-xs text-slate-600">&#x25BA; Safe-View Sandbox</span>
+      </div>
+    </div>
+
+    <!-- Loading bar (hidden by default) -->
+    <div id="loading-bar" class="hidden mb-2">
+      <div class="pulse-bar"></div>
+      <p id="loading-label" class="font-mono text-xs text-slate-600 mt-2 tracking-widest cursor">Initializing analysis modules</p>
+    </div>
+
+    <!-- Error Banner -->
+    <div id="error-banner" class="hidden glass-card p-4 mb-6" style="border-color:rgba(239,68,68,0.35);">
+      <p class="font-mono text-xs text-red-400 tracking-wide" id="error-text"></p>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         REPORT SECTION — Progressive disclosure
+         ══════════════════════════════════════ -->
+    <div id="report-section">
+
+      <!-- ① Composite Risk Score -->
+      <div class="module-card mb-4" id="risk-card">
+        <p class="module-label">Composite Threat Assessment</p>
+        <div class="flex items-center gap-8">
+          <!-- SVG ring -->
+          <div class="score-ring-container flex-shrink-0">
+            <svg width="96" height="96" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(16,185,129,0.1)" stroke-width="6"/>
+              <circle id="score-ring-fill" cx="48" cy="48" r="40" fill="none" stroke="#10b981"
+                stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="251.3" stroke-dashoffset="251.3"
+                style="transition:stroke-dashoffset 1s ease, stroke 0.5s ease;"/>
+            </svg>
+            <div class="score-label">
+              <span id="score-value" class="neon-text font-mono text-2xl font-bold">—</span>
+              <span class="font-mono text-xs text-slate-500 tracking-wider">/100</span>
+            </div>
+          </div>
+          <!-- Text summary -->
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span id="severity-badge" class="badge badge-info">PENDING</span>
+              <span id="severity-label" class="font-mono text-sm text-slate-300">—</span>
+            </div>
+            <p id="recommendation-text" class="font-mono text-xs text-slate-500 leading-relaxed tracking-wide">—</p>
+            <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1">
+              <p class="font-mono text-xs text-slate-600">Target: <span id="summary-target" class="text-slate-400">—</span></p>
+              <p class="font-mono text-xs text-slate-600">Resolved: <span id="summary-final" class="text-slate-400">—</span></p>
+              <p class="font-mono text-xs text-slate-600">Scan time: <span id="summary-ts" class="text-slate-400">—</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid: VT + Redirect -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+        <!-- ② VirusTotal Intelligence -->
+        <div class="module-card">
+          <p class="module-label">VirusTotal Threat Intelligence</p>
+          <div id="vt-content">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <p class="font-mono text-xs text-slate-500 mb-1">Verdict</p>
+                <span id="vt-verdict" class="badge badge-info">—</span>
+              </div>
+              <div class="text-right">
+                <p class="font-mono text-xs text-slate-500 mb-1">Detections</p>
+                <p class="font-mono text-xl neon-text"><span id="vt-malicious">—</span><span class="text-slate-600 text-sm"> / <span id="vt-total">—</span></span></p>
+              </div>
+            </div>
+            <div class="flex gap-2 mb-4">
+              <div style="flex:1; background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:2px;padding:8px;text-align:center;">
+                <p class="font-mono text-xs text-red-400">Malicious</p>
+                <p class="font-mono text-lg text-red-400" id="vt-mal-num">—</p>
+              </div>
+              <div style="flex:1; background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:2px;padding:8px;text-align:center;">
+                <p class="font-mono text-xs text-orange-400">Suspicious</p>
+                <p class="font-mono text-lg text-orange-400" id="vt-sus-num">—</p>
+              </div>
+              <div style="flex:1; background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:2px;padding:8px;text-align:center;">
+                <p class="font-mono text-xs neon-text">Harmless</p>
+                <p class="font-mono text-lg neon-text" id="vt-har-num">—</p>
+              </div>
+            </div>
+            <div id="vt-engines-list"></div>
+            <div id="vt-error" class="hidden font-mono text-xs text-slate-500 mt-2"></div>
+          </div>
+        </div>
+
+        <!-- ③ Redirect Chain -->
+        <div class="module-card">
+          <p class="module-label">Redirect Chain Analysis</p>
+          <div class="flex justify-between mb-3">
+            <span class="font-mono text-xs text-slate-500">Total Hops: <span id="hop-count" class="text-slate-300">—</span></span>
+            <span id="cross-domain-badge" class="badge badge-info hidden">Cross-Domain</span>
+          </div>
+          <div id="hop-chain" class="max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+
+      </div>
+
+      <!-- ④ HTTP Header Audit -->
+      <div class="module-card mb-4">
+        <p class="module-label">HTTP Security Header Audit</p>
+        <div class="flex items-center gap-6 mb-4">
+          <div>
+            <p class="font-mono text-xs text-slate-500 mb-1">Header Risk Level</p>
+            <span id="header-risk" class="badge badge-info">—</span>
+          </div>
+          <div>
+            <p class="font-mono text-xs text-slate-500 mb-1">Missing Headers</p>
+            <p class="font-mono text-xl" id="header-missing">—</p>
+          </div>
+          <div>
+            <p class="font-mono text-xs text-slate-500 mb-1">Server Disclosure</p>
+            <p class="font-mono text-sm text-slate-300" id="header-server">—</p>
+          </div>
+          <div>
+            <p class="font-mono text-xs text-slate-500 mb-1">HTTPS Enforced</p>
+            <p class="font-mono text-sm" id="header-https">—</p>
+          </div>
+        </div>
+        <div id="header-findings" class="space-y-0"></div>
+      </div>
+
+      <!-- ⑤ HTML Payload Analysis -->
+      <div class="module-card mb-4">
+        <p class="module-label">Static HTML Payload Analysis</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
+            <p class="font-mono text-xs text-slate-500 mb-1">Threat Score</p>
+            <p class="font-mono text-xl neon-text" id="html-score">—</p>
+          </div>
+          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
+            <p class="font-mono text-xs text-slate-500 mb-1">Detections</p>
+            <p class="font-mono text-xl text-slate-300" id="html-det">—</p>
+          </div>
+          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
+            <p class="font-mono text-xs text-slate-500 mb-1">IFrames Found</p>
+            <p class="font-mono text-xl text-slate-300" id="html-iframes">—</p>
+          </div>
+          <div style="background:rgba(5,5,5,0.5);border:1px solid rgba(16,185,129,0.12);border-radius:2px;padding:10px;">
+            <p class="font-mono text-xs text-slate-500 mb-1">Payload Size</p>
+            <p class="font-mono text-xl text-slate-300" id="html-size">—</p>
+          </div>
+        </div>
+        <div id="html-detections"></div>
+      </div>
+
+      <!-- ⑥ Safe-View Sandbox -->
+      <div class="module-card">
+        <p class="module-label">Safe-View Sandbox Preview</p>
+        <p class="font-mono text-xs text-slate-600 mb-3 tracking-wide">
+          Rendered via isolated third-party screenshot API. No direct browser contact with target.
+        </p>
+        <div id="preview-container" class="preview-frame">
+          <p class="font-mono text-xs text-slate-600">Preview not available.</p>
+        </div>
+        <div id="preview-error" class="hidden font-mono text-xs text-slate-600 mt-2"></div>
+      </div>
+
+    </div><!-- /report-section -->
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer style="border-top:1px solid rgba(16,185,129,0.1);" class="mt-16 py-6">
+    <div class="max-w-4xl mx-auto px-6 flex justify-between items-center">
+      <p class="font-mono text-xs text-slate-700 tracking-widest uppercase">CyberScan Sentinel</p>
+      <p class="font-mono text-xs text-slate-700">For authorized security analysis only.</p>
+    </div>
+  </footer>
+
+  <script>
+    /* ─────────────────────────────────────────
+       Utility helpers
+    ───────────────────────────────────────── */
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+
+    function severityClass(s) {
+      const map = {
+        CRITICAL:'badge-critical', HIGH:'badge-high',
+        MEDIUM:'badge-medium', LOW:'badge-low',
+        INFO:'badge-info', PRESENT:'badge-present',
+        ABSENT:'badge-absent', DISCLOSURE:'badge-medium',
+        ERROR:'badge-high', CLEAN:'badge-low',
+        MALICIOUS:'badge-critical', SUSPICIOUS:'badge-high',
+      };
+      return map[s?.toUpperCase()] || 'badge-info';
+    }
+
+    function scoreColor(score) {
+      if (score >= 70) return '#ef4444';
+      if (score >= 45) return '#f97316';
+      if (score >= 20) return '#eab308';
+      return '#10b981';
+    }
+
+    function truncate(str, len = 48) {
+      if (!str) return '—';
+      return str.length > len ? str.slice(0, len) + '…' : str;
+    }
+
+    function formatBytes(b) {
+      if (!b) return '—';
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      return (b/1048576).toFixed(2) + ' MB';
+    }
+
+    /* ─────────────────────────────────────────
+       Health check on load
+    ───────────────────────────────────────── */
+    async function checkHealth() {
+      try {
+        const r = await fetch('/api/health');
+        const d = await r.json();
+        const parts = [];
+        if (d.virustotal_configured) parts.push('VT');
+        if (d.screenshot_configured) parts.push('SS');
+        $('api-status').textContent = parts.length
+          ? `SYSTEMS NOMINAL [${parts.join(' | ')}]`
+          : 'DEGRADED — API KEYS NOT SET';
+        $('status-dot').style.background = parts.length ? '#10b981' : '#eab308';
+        $('status-dot').style.boxShadow   = parts.length
+          ? '0 0 6px #10b981' : '0 0 6px #eab308';
+      } catch {
+        $('api-status').textContent = 'SYSTEM STATUS UNKNOWN';
+      }
+    }
+    checkHealth();
+
+    /* ─────────────────────────────────────────
+       Enter key trigger
+    ───────────────────────────────────────── */
+    $('url-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') initiateScan();
+    });
+
+    /* ─────────────────────────────────────────
+       Scan orchestration
+    ───────────────────────────────────────── */
+    const loadingMessages = [
+      'Initializing analysis modules',
+      'Tracing redirect chain',
+      'Auditing HTTP response headers',
+      'Running static payload analysis',
+      'Querying VirusTotal V3 engine',
+      'Generating safe-view sandbox preview',
+      'Aggregating threat intelligence report',
+    ];
+
+    let loadingTimer = null;
+    let msgIndex = 0;
+
+    function startLoadingMessages() {
+      msgIndex = 0;
+      $('loading-label').textContent = loadingMessages[0];
+      loadingTimer = setInterval(() => {
+        msgIndex = (msgIndex + 1) % loadingMessages.length;
+        $('loading-label').textContent = loadingMessages[msgIndex];
+      }, 2200);
+    }
+
+    function stopLoadingMessages() {
+      if (loadingTimer) clearInterval(loadingTimer);
+    }
+
+    async function initiateScan() {
+      const url = $('url-input').value.trim();
+      if (!url) return;
+
+      // Reset UI state
+      $('scan-btn').disabled = true;
+      $('error-banner').classList.add('hidden');
+      $('report-section').classList.remove('visible');
+      $('loading-bar').classList.remove('hidden');
+      startLoadingMessages();
+
+      try {
+        const resp = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          showError(data.error || 'Scan request failed. Verify target URL and retry.');
+          return;
+        }
+
+        renderReport(data);
+
+      } catch (err) {
+        showError('Network failure — unable to reach the CyberScan Sentinel API.');
+      } finally {
+        stopLoadingMessages();
+        $('loading-bar').classList.add('hidden');
+        $('scan-btn').disabled = false;
+      }
+    }
+
+    function showError(msg) {
+      $('error-text').textContent = msg;
+      $('error-banner').classList.remove('hidden');
+    }
+
+    /* ─────────────────────────────────────────
+       Report rendering
+    ───────────────────────────────────────── */
+    function renderReport(d) {
+      const risk = d.risk || {};
+      const vt   = d.virustotal || {};
+      const rc   = d.redirect_chain || {};
+      const ha   = d.header_audit || {};
+      const html = d.html_analysis || {};
+      const ss   = d.safe_preview || {};
+
+      /* ① Composite Risk */
+      const score = risk.composite_score ?? 0;
+      $('score-value').textContent = score;
+      const circumference = 251.3;
+      const offset = circumference - (score / 100) * circumference;
+      $('score-ring-fill').style.strokeDashoffset = offset;
+      $('score-ring-fill').style.stroke = scoreColor(score);
+
+      const sev = risk.severity || 'UNKNOWN';
+      $('severity-badge').className = `badge ${severityClass(sev)}`;
+      $('severity-badge').textContent = sev;
+      $('severity-label').textContent = {
+        CRITICAL:'Critical Threat Detected',
+        HIGH:'High-Risk Indicators Present',
+        MEDIUM:'Moderate Risk — Caution Advised',
+        LOW:'No Significant Threat Indicators',
+      }[sev] || sev;
+      $('recommendation-text').textContent = risk.recommendation || '—';
+      $('summary-target').textContent = truncate(d.target_url, 52);
+      $('summary-final').textContent  = truncate(d.final_url, 52);
+      $('summary-ts').textContent     = d.scan_timestamp || '—';
+
+      /* ② VirusTotal */
+      if (vt.error && !vt.available) {
+        $('vt-error').textContent = vt.error;
+        $('vt-error').classList.remove('hidden');
+      } else if (vt.error) {
+        $('vt-error').textContent = 'VirusTotal: ' + vt.error;
+        $('vt-error').classList.remove('hidden');
+      } else {
+        const verdict = vt.verdict || 'UNKNOWN';
+        $('vt-verdict').className = `badge ${severityClass(verdict)}`;
+        $('vt-verdict').textContent = verdict;
+        $('vt-malicious').textContent = vt.malicious ?? '—';
+        $('vt-total').textContent     = vt.total_engines ?? '—';
+        $('vt-mal-num').textContent   = vt.malicious ?? '—';
+        $('vt-sus-num').textContent   = vt.suspicious ?? '—';
+        $('vt-har-num').textContent   = vt.harmless ?? '—';
+
+        const engines = vt.flagged_engines || [];
+        if (engines.length > 0) {
+          let html_str = '<p class="font-mono text-xs text-slate-600 mb-2 tracking-wider uppercase">Flagging Engines</p>';
+          engines.forEach(e => {
+            html_str += `<div class="engine-row">
+              <span class="text-slate-400">${esc(e.engine)}</span>
+              <span class="${severityClass(e.category)} badge" style="font-size:9px;">${esc(e.result || e.category)}</span>
+            </div>`;
+          });
+          $('vt-engines-list').innerHTML = html_str;
+        }
+      }
+
+      /* ③ Redirect Chain */
+      $('hop-count').textContent = rc.hop_count ?? '—';
+      const crossDomain = rc.cross_domain_redirect;
+      if (crossDomain) {
+        $('cross-domain-badge').classList.remove('hidden');
+        $('cross-domain-badge').className = 'badge badge-high';
+      }
+
+      const chain = rc.chain || [];
+      let chainHtml = '';
+      chain.forEach((hop, i) => {
+        const code = hop.status_code;
+        let codeColor = 'text-slate-400';
+        if (code >= 300 && code < 400) codeColor = 'text-yellow-400';
+        if (code >= 400) codeColor = 'text-red-400';
+        if (code >= 200 && code < 300) codeColor = 'text-green-400';
+
+        chainHtml += `<div class="hop-row">
+          <div class="flex justify-between items-center">
+            <span class="font-mono text-xs text-slate-500">HOP ${hop.hop}</span>
+            ${code ? `<span class="font-mono text-xs ${codeColor}">${code}</span>` : ''}
+          </div>
+          <p class="font-mono text-xs text-slate-300 mt-1 break-all">${esc(hop.url)}</p>
+          ${hop.error ? `<p class="font-mono text-xs text-red-400 mt-1">${esc(hop.error)}</p>` : ''}
+        </div>`;
+        if (i < chain.length - 1) {
+          chainHtml += `<div class="hop-connector"></div>`;
+        }
+      });
+      $('hop-chain').innerHTML = chainHtml || '<p class="font-mono text-xs text-slate-600">No redirect data available.</p>';
+
+      /* ④ Header Audit */
+      const riskMap = { HIGH:'badge-high', MEDIUM:'badge-medium', LOW:'badge-low' };
+      $('header-risk').className   = `badge ${riskMap[ha.risk_level] || 'badge-info'}`;
+      $('header-risk').textContent = ha.risk_level || '—';
+      $('header-missing').textContent  = ha.missing_headers ?? '—';
+      $('header-missing').className    = `font-mono text-xl ${ha.missing_headers > 3 ? 'text-red-400' : ha.missing_headers > 1 ? 'text-yellow-400' : 'neon-text'}`;
+      $('header-server').textContent   = ha.server || 'Not Disclosed';
+      $('header-https').textContent    = ha.https_enforced ? 'Yes' : 'No';
+      $('header-https').className      = `font-mono text-sm ${ha.https_enforced ? 'neon-text' : 'text-red-400'}`;
+
+      const findings = ha.findings || [];
+      let findHtml = '';
+      findings.forEach(f => {
+        findHtml += `<div class="header-row">
+          <span class="font-mono text-xs text-slate-400" style="min-width:220px;">${esc(f.header)}</span>
+          <span class="badge ${severityClass(f.status)}" style="font-size:9px;">${esc(f.status)}</span>
+          <span class="font-mono text-xs text-slate-500 text-right flex-1 ml-4">${esc(truncate(f.description, 72))}</span>
+        </div>`;
+      });
+      $('header-findings').innerHTML = findHtml;
+
+      /* ⑤ HTML Analysis */
+      $('html-score').textContent   = html.threat_score ?? '—';
+      $('html-score').className     = `font-mono text-xl ${(html.threat_score||0) > 50 ? 'text-red-400' : (html.threat_score||0) > 20 ? 'text-yellow-400' : 'neon-text'}`;
+      $('html-det').textContent     = html.detection_count ?? '—';
+      $('html-iframes').textContent = `${html.iframe_count ?? '—'} (${html.hidden_iframe_count ?? 0} hidden)`;
+      $('html-size').textContent    = formatBytes(html.raw_size_bytes);
+
+      const dets = html.detections || [];
+      if (dets.length === 0) {
+        $('html-detections').innerHTML = '<p class="font-mono text-xs neon-text">No payload indicators detected.</p>';
+      } else {
+        let detHtml = '';
+        dets.forEach(det => {
+          detHtml += `<div class="flex items-start gap-3 py-2" style="border-bottom:1px solid rgba(16,185,129,0.06);">
+            <span class="badge ${severityClass(det.severity)} flex-shrink-0" style="font-size:9px;margin-top:1px;">${esc(det.severity)}</span>
+            <div>
+              <p class="font-mono text-xs text-slate-300">${esc(det.label)}</p>
+              <p class="font-mono text-xs text-slate-600">${esc(det.type)} — ${det.occurrences} occurrence(s)</p>
+            </div>
+          </div>`;
+        });
+        $('html-detections').innerHTML = detHtml;
+      }
+
+      /* ⑥ Safe Preview */
+      if (ss.screenshot_url) {
+        $('preview-container').innerHTML = `<img src="${esc(ss.screenshot_url)}" alt="Sandbox preview" style="width:100%;height:100%;object-fit:cover;" />`;
+      } else {
+        const errMsg = ss.error || (ss.available === false
+          ? 'SCREENSHOT_API_KEY not configured — set environment variable to enable safe preview.'
+          : 'Preview unavailable for this target.');
+        $('preview-container').innerHTML = `<p class="font-mono text-xs text-slate-600 text-center px-8">${esc(errMsg)}</p>`;
+      }
+
+      /* Reveal the report */
+      requestAnimationFrame(() => {
+        $('report-section').classList.add('visible');
+        $('report-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  </script>
 </body>
 </html>
